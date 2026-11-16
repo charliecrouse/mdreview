@@ -20,13 +20,23 @@ swift run mdreview path/to/file.md
 
 You can also run it without a file, then use **File → Open…** (⌘O) or drag a `.md` file onto the window. Try it on this README with `swift run mdreview README.md`.
 
-Run the core self-check like this:
+Run the core self-check with `make test` (or `swift run mdreview-check`). It checks rendered-to-source line mapping and the review export. It is a small executable rather than `swift test`, because `swift test` doesn't build with just the Command Line Tools (`import Testing` fails with "no such module 'Testing'").
 
-```sh
-swift run mdreview-check
-```
+## Development
 
-It checks rendered-to-source line mapping and the review export. It is a small executable rather than `swift test`, because the Command Line Tools ship Swift Testing without its Foundation overlay module, so `swift test` doesn't build there.
+Plain `make`, no extra tools. `swift format` ships with the Swift 6.2 toolchain.
+
+| Target | What it does |
+|---|---|
+| `make build` | `swift build` |
+| `make run FILE=README.md` | Build and open a file (`FILE` is optional) |
+| `make test` | Run the `mdreview-check` self-check |
+| `make lint` | `swift format lint --strict`; fails on violations |
+| `make format` | Rewrite sources with `swift format` |
+| `make check` | `lint` then `test` |
+| `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
+
+Style lives in `.swift-format` and `.editorconfig`.
 
 ## Using it
 
