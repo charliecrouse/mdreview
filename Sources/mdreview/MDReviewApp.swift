@@ -245,6 +245,10 @@ struct Sidebar: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(BehindWindowGlass().ignoresSafeArea())
+        // The glass stays active when the window isn't key, so keep the rows at full contrast too.
+        .environment(\.controlActiveState, .active)
     }
 }
 
@@ -282,6 +286,7 @@ struct CommentsInspector: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .background(BehindWindowGlass().ignoresSafeArea())
         .onChange(of: model.focusedComment) { _, id in focusedField = id }
     }
 }
@@ -326,6 +331,23 @@ struct CommentCard: View {
         .contentShape(.rect)
         .onTapGesture(perform: onSelect)
     }
+}
+
+/// Behind-window material: the desktop shows through the side panels, blurred, like the
+/// classic Mac sidebar and the old Codex app. Liquid Glass only refracts in-window content,
+/// so it can't do this. AppKit swaps in an opaque fill when Reduce Transparency is on.
+/// The material stays active when the window isn't key: a review window usually sits beside the
+/// agent's terminal, and the default (flatten to gray when inactive) made the panels look opaque.
+struct BehindWindowGlass: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .sidebar
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
 
 // MARK: - Reader (opaque paper)

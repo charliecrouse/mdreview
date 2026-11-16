@@ -4,7 +4,7 @@ A native macOS app for reviewing Markdown files and handing the review to a codi
 
 You open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers. **Send to Agent** batches the comments into one Markdown review: file path, line ranges, the quoted text and your comment.
 
-The design is "paper on glass". The sidebar, toolbar and comment inspector use system Liquid Glass, while the document itself sits on an opaque reading surface.
+The design is "paper on glass". The sidebar and comment inspector use a behind-window material, so the desktop shows through them blurred, and the toolbar uses Liquid Glass. The document itself sits on an opaque reading surface. Reduce Transparency turns the panels opaque.
 
 ## Requirements
 
