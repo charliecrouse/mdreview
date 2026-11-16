@@ -133,51 +133,41 @@ final class ReviewModel {
 
 // MARK: - Window
 
+/// Height of the unified title bar/toolbar row the side panels run underneath.
+private let titleBarHeight: CGFloat = 52
+
 struct ContentView: View {
     @Bindable var model: ReviewModel
+    @State private var showSidebar = true
     @State private var showInspector = true
 
     var body: some View {
-        NavigationSplitView {
-            Sidebar(model: model)
-                .navigationSplitViewColumnWidth(min: 180, ideal: 230, max: 340)
-        } detail: {
-            Group {
-                if model.fileURL == nil {
-                    ContentUnavailableView {
-                        Label("Open a Markdown file", systemImage: "doc.text")
-                    } description: {
-                        Text("Drop a .md file here or press ⌘O.")
-                    } actions: {
-                        Button("Open…") { model.showOpenPanel() }
-                    }
-                } else {
-                    ReaderView(
-                        text: model.rendered.text,
-                        comments: model.comments,
-                        focused: model.focusedComment,
-                        scrollTarget: model.scrollTarget,
-                        onSelect: { model.selection = $0 },
-                        onComment: { model.addComment() },
-                        onScrolled: { model.scrollTarget = nil }
-                    )
-                }
+        // Our own split instead of NavigationSplitView: on macOS 26 that floats the sidebar as an
+        // inset rounded card. These panels run flush and full height, Codex/pre-Tahoe-Notes style.
+        HSplitView {
+            if showSidebar {
+                Sidebar(model: model)
+                    .frame(minWidth: 190, idealWidth: 240, maxWidth: 360)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .textBackgroundColor))
-            .dropDestination(for: URL.self) { urls, _ in
-                guard let url = urls.first else { return false }
-                model.open(url)
-                return true
-            }
-            .inspector(isPresented: $showInspector) {
+            reader
+                .frame(minWidth: 420, maxWidth: .infinity)
+                .layoutPriority(1) // the reader takes extra width; the panels keep theirs
+            if showInspector {
                 CommentsInspector(model: model)
-                    .inspectorColumnWidth(min: 250, ideal: 300, max: 420)
+                    .frame(minWidth: 250, idealWidth: 300, maxWidth: 440)
             }
         }
+        .ignoresSafeArea(edges: .top)
         .navigationTitle(model.fileURL?.lastPathComponent ?? "mdreview")
-        .navigationSubtitle(model.fileURL.map { _ in "\(model.comments.count) comment\(model.comments.count == 1 ? "" : "s")" } ?? "")
+        .toolbar(removing: .title) // shown in the reader header instead
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button("Sidebar", systemImage: "sidebar.left") { showSidebar.toggle() }
+                    .keyboardShortcut("s", modifiers: [.command, .control])
+                    .help("Show or hide the sidebar (⌃⌘S)")
+            }
+            ToolbarSpacer(.flexible)
             ToolbarItem {
                 Button("Add Comment", systemImage: "text.bubble") { model.addComment() }
                     .disabled(!model.canComment)
@@ -204,6 +194,50 @@ struct ContentView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.error ?? "")
+        }
+    }
+
+    private var reader: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(model.fileURL?.lastPathComponent ?? "mdreview").font(.headline)
+                if model.fileURL != nil {
+                    Text("\(model.comments.count) comment\(model.comments.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+            .frame(height: titleBarHeight)
+            Group {
+                if model.fileURL == nil {
+                    ContentUnavailableView {
+                        Label("Open a Markdown file", systemImage: "doc.text")
+                    } description: {
+                        Text("Drop a .md file here or press ⌘O.")
+                    } actions: {
+                        Button("Open…") { model.showOpenPanel() }
+                    }
+                } else {
+                    ReaderView(
+                        text: model.rendered.text,
+                        comments: model.comments,
+                        focused: model.focusedComment,
+                        scrollTarget: model.scrollTarget,
+                        onSelect: { model.selection = $0 },
+                        onComment: { model.addComment() },
+                        onScrolled: { model.scrollTarget = nil }
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .ignoresSafeArea(edges: .top) // header sits in the title bar row, like Codex
+        .background(Color(nsColor: .textBackgroundColor))
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let url = urls.first else { return false }
+            model.open(url)
+            return true
         }
     }
 }
@@ -245,6 +279,7 @@ struct Sidebar: View {
                 }
             }
         }
+        .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         .background(BehindWindowGlass().ignoresSafeArea())
         // The glass stays active when the window isn't key, so keep the rows at full contrast too.

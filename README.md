@@ -36,6 +36,7 @@ It checks rendered-to-source line mapping and the review export. It is a small e
 | Comment on a selection | Select text, then press ⌥⌘M. You can also right-click → **Add Comment**, or use the toolbar's comment button. |
 | Edit or delete a comment | Type in its card in the inspector, or click the trash icon |
 | Jump to a comment or heading | Click it in the inspector or the sidebar |
+| Show or hide the panels | ⌃⌘S for the sidebar, or the toolbar buttons for either panel |
 | Send to Agent | Press ⌘↩ or use the toolbar button |
 
 **Send to Agent** is a local handoff in this version. It copies the review to the clipboard and also saves it next to the file as `<name>.review.md`. The saved file is overwritten on each send. Paste the review into Claude Code, Codex or another agent, or point the agent at the saved file:
@@ -64,7 +65,7 @@ What's the rollback?
 - `Sources/MDReviewCore/`
   - `Markdown.swift`: a line-oriented Markdown renderer. It tags every rendered character with the source line it came from.
   - `Review.swift`: the comment model and the review export.
-- `Sources/mdreview/MDReviewApp.swift`: the SwiftUI app. It has a split view with a glass sidebar (outline and comments), an opaque `NSTextView` reader, and a comment inspector.
+- `Sources/mdreview/MDReviewApp.swift`: the SwiftUI app. It has a flush three-pane split: a translucent sidebar (outline and comments), an opaque `NSTextView` reader, and a translucent comment inspector.
 - `Sources/mdreview-check/`: the self-check.
 
 ## Not yet
