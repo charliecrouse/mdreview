@@ -50,7 +50,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // `swift run mdreview path/to/file.md`; skip `-Key value` defaults pairs.
         var args = CommandLine.arguments.dropFirst()
         while let arg = args.popFirst() {
-            if arg.hasPrefix("-") { _ = args.popFirst(); continue }
+            if arg.hasPrefix("-") {
+                _ = args.popFirst()
+                continue
+            }
             model.open(URL(fileURLWithPath: arg))
             break
         }
@@ -129,7 +132,8 @@ final class ReviewModel {
         let out = ReviewExport.reviewURL(for: url)
         do {
             try review.write(to: out, atomically: true, encoding: .utf8)
-            status = "Copied \(comments.count) comment\(comments.count == 1 ? "" : "s") · saved \(out.lastPathComponent)"
+            status =
+                "Copied \(comments.count) comment\(comments.count == 1 ? "" : "s") · saved \(out.lastPathComponent)"
         } catch {
             status = "Copied to clipboard, but couldn't save \(out.lastPathComponent): \(error.localizedDescription)"
         }
@@ -173,8 +177,10 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // Dense frost over the window glass keeps body text legible on busy wallpapers;
             // fully opaque under Reduce Transparency or Increase Contrast.
-            .background(Color(nsColor: .textBackgroundColor)
-                .opacity(reduceTransparency || contrast == .increased ? 1 : 0.86))
+            .background(
+                Color(nsColor: .textBackgroundColor)
+                    .opacity(reduceTransparency || contrast == .increased ? 1 : 0.86)
+            )
             .dropDestination(for: URL.self) { urls, _ in
                 guard let url = urls.first else { return false }
                 model.open(url)
@@ -185,9 +191,11 @@ struct ContentView: View {
                     .inspectorColumnWidth(min: 250, ideal: 300, max: 420)
             }
         }
-        .background(BehindWindowGlass().ignoresSafeArea()) // the whole window is glass
+        .background(BehindWindowGlass().ignoresSafeArea())  // the whole window is glass
         .navigationTitle(model.fileURL?.lastPathComponent ?? "mdreview")
-        .navigationSubtitle(model.fileURL.map { _ in "\(model.comments.count) comment\(model.comments.count == 1 ? "" : "s")" } ?? "")
+        .navigationSubtitle(
+            model.fileURL.map { _ in "\(model.comments.count) comment\(model.comments.count == 1 ? "" : "s")" } ?? ""
+        )
         .toolbar {
             ToolbarItem {
                 Button("Add Comment", systemImage: "text.bubble") { model.addComment() }
@@ -211,7 +219,10 @@ struct ContentView: View {
                 Button("Comments", systemImage: "sidebar.right") { showInspector.toggle() }
             }
         }
-        .alert("Couldn't open file", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
+        .alert(
+            "Couldn't open file",
+            isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })
+        ) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.error ?? "")
@@ -230,7 +241,9 @@ struct Sidebar: View {
                         Text("No headings").foregroundStyle(.tertiary)
                     }
                     ForEach(model.rendered.headings) { heading in
-                        Button { model.reveal(line: heading.line) } label: {
+                        Button {
+                            model.reveal(line: heading.line)
+                        } label: {
                             Text(heading.title)
                                 .fontWeight(heading.level == 1 ? .semibold : .regular)
                                 .padding(.leading, CGFloat(heading.level - 1) * 12)
@@ -242,7 +255,9 @@ struct Sidebar: View {
                 if !model.comments.isEmpty {
                     Section("Comments") {
                         ForEach(Array(model.comments.enumerated()), id: \.element.id) { index, comment in
-                            Button { model.reveal(comment) } label: {
+                            Button {
+                                model.reveal(comment)
+                            } label: {
                                 Label {
                                     Text(comment.text.isEmpty ? comment.quote : comment.text).lineLimit(1)
                                 } icon: {
@@ -266,8 +281,9 @@ struct CommentsInspector: View {
     var body: some View {
         VStack(spacing: 0) {
             if model.comments.isEmpty {
-                ContentUnavailableView("No comments", systemImage: "text.bubble",
-                                       description: Text("Select text in the document, then press ⌥⌘M or right-click → Add Comment."))
+                ContentUnavailableView(
+                    "No comments", systemImage: "text.bubble",
+                    description: Text("Select text in the document, then press ⌥⌘M or right-click → Add Comment."))
             } else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
@@ -293,7 +309,7 @@ struct CommentsInspector: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity) // glass fills the column even when empty
+        .frame(maxWidth: .infinity, maxHeight: .infinity)  // glass fills the column even when empty
         .background(BehindWindowGlass().ignoresSafeArea())
         .onChange(of: model.focusedComment) { _, id in focusedField = id }
     }
@@ -335,7 +351,10 @@ struct CommentCard: View {
         }
         .padding(10)
         .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(isFocused ? Color.accentColor : Color.secondary.opacity(0.2)))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10).strokeBorder(
+                isFocused ? Color.accentColor : Color.secondary.opacity(0.2))
+        )
         .contentShape(.rect)
         .onTapGesture(perform: onSelect)
     }
@@ -376,13 +395,13 @@ struct ReaderView: NSViewRepresentable {
         let textView = PaperTextView(usingTextLayoutManager: false)
         textView.isEditable = false
         textView.isSelectable = true
-        textView.drawsBackground = false // the SwiftUI frost behind shows through
+        textView.drawsBackground = false  // the SwiftUI frost behind shows through
         textView.isVerticallyResizable = true
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
         textView.usesFindBar = true
         textView.delegate = context.coordinator
-        textView.unregisterDraggedTypes() // let file drops reach the SwiftUI drop target
+        textView.unregisterDraggedTypes()  // let file drops reach the SwiftUI drop target
 
         let scrollView = NSScrollView()
         scrollView.documentView = textView
@@ -437,17 +456,20 @@ struct ReaderView: NSViewRepresentable {
             layout.removeTemporaryAttribute(.backgroundColor, forCharacterRange: all)
             layout.removeTemporaryAttribute(.underlineStyle, forCharacterRange: all)
             for comment in comments where NSMaxRange(comment.range) <= length {
-                layout.addTemporaryAttributes([
-                    .backgroundColor: NSColor.controlAccentColor.withAlphaComponent(comment.id == focused ? 0.32 : 0.16),
-                    .underlineStyle: NSUnderlineStyle.single.rawValue,
-                    .underlineColor: NSColor.controlAccentColor,
-                ], forCharacterRange: comment.range)
+                layout.addTemporaryAttributes(
+                    [
+                        .backgroundColor: NSColor.controlAccentColor.withAlphaComponent(
+                            comment.id == focused ? 0.32 : 0.16),
+                        .underlineStyle: NSUnderlineStyle.single.rawValue,
+                        .underlineColor: NSColor.controlAccentColor,
+                    ], forCharacterRange: comment.range)
             }
         }
 
         func reveal(_ range: NSRange) {
             guard let textView, let layout = textView.layoutManager, let container = textView.textContainer,
-                  NSMaxRange(range) <= (textView.textStorage?.length ?? 0) else { return }
+                NSMaxRange(range) <= (textView.textStorage?.length ?? 0)
+            else { return }
             layout.ensureLayout(for: container)
             let glyphs = layout.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
             let rect = layout.boundingRect(forGlyphRange: glyphs, in: container)

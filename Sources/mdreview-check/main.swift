@@ -4,26 +4,29 @@ import MDReviewCore
 // Self-check for the core logic: `swift run mdreview-check` (works with Command Line Tools or Xcode).
 var failures = 0
 @MainActor func check(_ ok: Bool, _ what: String = "", line: Int = #line) {
-    if !ok { failures += 1; print("FAIL line \(line): \(what)") }
+    if !ok {
+        failures += 1
+        print("FAIL line \(line): \(what)")
+    }
 }
 
 private let source = """
-# Plan
+    # Plan
 
-Ship the importer behind a **feature flag**
-and enable it for `internal` users first.
+    Ship the importer behind a **feature flag**
+    and enable it for `internal` users first.
 
-## Steps
+    ## Steps
 
-- Add the flag
-- [x] Backfill workspaces
+    - Add the flag
+    - [x] Backfill workspaces
 
-```
-mdreview send
-```
-"""
+    ```
+    mdreview send
+    ```
+    """
 
-do { // rendered selections map back to source lines
+do {  // rendered selections map back to source lines
     let rendered = MarkdownRenderer.render(source)
     let text = rendered.text.string as NSString
 
@@ -46,10 +49,12 @@ do { // rendered selections map back to source lines
     let span = NSRange(location: start, length: NSMaxRange(text.range(of: "Add the flag")) - start)
     check(MarkdownRenderer.lineRange(of: span, in: rendered.text) == 3...8)
     check(MarkdownRenderer.lineRange(of: NSRange(location: 0, length: 0), in: rendered.text) == nil)
-    check(MarkdownRenderer.range(ofLine: 6, in: rendered.text).map { text.substring(with: $0) }?.hasPrefix("Steps") == true)
+    check(
+        MarkdownRenderer.range(ofLine: 6, in: rendered.text).map { text.substring(with: $0) }?.hasPrefix("Steps")
+            == true)
 }
 
-do { // tables render as tab-separated cells; the divider row is rendered away
+do {  // tables render as tab-separated cells; the divider row is rendered away
     let table = MarkdownRenderer.render("| Action | How |\n|---|:--:|\n| Open | ⌘O |\n\nAfter the table.")
     let text = table.text.string as NSString
     check(!text.contains("|") && !text.contains("---"), "table syntax rendered away")
@@ -58,7 +63,7 @@ do { // tables render as tab-separated cells; the divider row is rendered away
     check(MarkdownRenderer.lineRange(of: text.range(of: "After"), in: table.text) == 5...5)
 }
 
-do { // the review export carries path, lines, quote and comment
+do {  // the review export carries path, lines, quote and comment
     let file = URL(fileURLWithPath: "/tmp/notes/plan.md")
     let comments = [
         ReviewComment(lines: 9...9, quote: "Backfill", text: "Which workspaces?", range: NSRange()),
