@@ -47,9 +47,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Needed when launched as a bare executable (`swift run`) rather than an .app bundle.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
-        // `swift run mdreview path/to/file.md`
-        if let path = CommandLine.arguments.dropFirst().first(where: { !$0.hasPrefix("-") }) {
-            model.open(URL(fileURLWithPath: path))
+        // `swift run mdreview path/to/file.md`; skip `-Key value` defaults pairs.
+        var args = CommandLine.arguments.dropFirst()
+        while let arg = args.popFirst() {
+            if arg.hasPrefix("-") { _ = args.popFirst(); continue }
+            model.open(URL(fileURLWithPath: arg))
+            break
         }
     }
 
@@ -290,6 +293,7 @@ struct CommentsInspector: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity) // glass fills the column even when empty
         .background(BehindWindowGlass().ignoresSafeArea())
         .onChange(of: model.focusedComment) { _, id in focusedField = id }
     }
