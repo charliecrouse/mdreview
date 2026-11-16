@@ -21,6 +21,8 @@ struct MDReviewApp: App {
         }
         .defaultSize(width: 1180, height: 760)
         .commands {
+            SidebarCommands()
+            InspectorCommands()
             CommandGroup(replacing: .newItem) {
                 Button("Open…") { model.showOpenPanel() }
                     .keyboardShortcut("o")
@@ -133,41 +135,57 @@ final class ReviewModel {
 
 // MARK: - Window
 
-/// Height of the unified title bar/toolbar row the side panels run underneath.
-private let titleBarHeight: CGFloat = 52
-
 struct ContentView: View {
     @Bindable var model: ReviewModel
-    @State private var showSidebar = true
     @State private var showInspector = true
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        // Our own split instead of NavigationSplitView: on macOS 26 that floats the sidebar as an
-        // inset rounded card. These panels run flush and full height, Codex/pre-Tahoe-Notes style.
-        HSplitView {
-            if showSidebar {
-                Sidebar(model: model)
-                    .frame(minWidth: 190, idealWidth: 240, maxWidth: 360)
+        NavigationSplitView {
+            Sidebar(model: model)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 230, max: 340)
+        } detail: {
+            Group {
+                if model.fileURL == nil {
+                    ContentUnavailableView {
+                        Label("Open a Markdown file", systemImage: "doc.text")
+                    } description: {
+                        Text("Drop a .md file here or press ⌘O.")
+                    } actions: {
+                        Button("Open…") { model.showOpenPanel() }
+                    }
+                } else {
+                    ReaderView(
+                        text: model.rendered.text,
+                        comments: model.comments,
+                        focused: model.focusedComment,
+                        scrollTarget: model.scrollTarget,
+                        onSelect: { model.selection = $0 },
+                        onComment: { model.addComment() },
+                        onScrolled: { model.scrollTarget = nil }
+                    )
+                }
             }
-            reader
-                .frame(minWidth: 420, maxWidth: .infinity)
-                .layoutPriority(1) // the reader takes extra width; the panels keep theirs
-            if showInspector {
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Dense frost over the window glass keeps body text legible on busy wallpapers;
+            // fully opaque under Reduce Transparency or Increase Contrast.
+            .background(Color(nsColor: .textBackgroundColor)
+                .opacity(reduceTransparency || contrast == .increased ? 1 : 0.86))
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first else { return false }
+                model.open(url)
+                return true
+            }
+            .inspector(isPresented: $showInspector) {
                 CommentsInspector(model: model)
-                    .frame(minWidth: 250, idealWidth: 300, maxWidth: 440)
+                    .inspectorColumnWidth(min: 250, ideal: 300, max: 420)
             }
         }
-        .ignoresSafeArea(edges: .top)
+        .background(BehindWindowGlass().ignoresSafeArea()) // the whole window is glass
         .navigationTitle(model.fileURL?.lastPathComponent ?? "mdreview")
-        .toolbar(removing: .title) // shown in the reader header instead
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .navigationSubtitle(model.fileURL.map { _ in "\(model.comments.count) comment\(model.comments.count == 1 ? "" : "s")" } ?? "")
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button("Sidebar", systemImage: "sidebar.left") { showSidebar.toggle() }
-                    .keyboardShortcut("s", modifiers: [.command, .control])
-                    .help("Show or hide the sidebar (⌃⌘S)")
-            }
-            ToolbarSpacer(.flexible)
             ToolbarItem {
                 Button("Add Comment", systemImage: "text.bubble") { model.addComment() }
                     .disabled(!model.canComment)
@@ -194,50 +212,6 @@ struct ContentView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.error ?? "")
-        }
-    }
-
-    private var reader: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(model.fileURL?.lastPathComponent ?? "mdreview").font(.headline)
-                if model.fileURL != nil {
-                    Text("\(model.comments.count) comment\(model.comments.count == 1 ? "" : "s")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 20)
-            .frame(height: titleBarHeight)
-            Group {
-                if model.fileURL == nil {
-                    ContentUnavailableView {
-                        Label("Open a Markdown file", systemImage: "doc.text")
-                    } description: {
-                        Text("Drop a .md file here or press ⌘O.")
-                    } actions: {
-                        Button("Open…") { model.showOpenPanel() }
-                    }
-                } else {
-                    ReaderView(
-                        text: model.rendered.text,
-                        comments: model.comments,
-                        focused: model.focusedComment,
-                        scrollTarget: model.scrollTarget,
-                        onSelect: { model.selection = $0 },
-                        onComment: { model.addComment() },
-                        onScrolled: { model.scrollTarget = nil }
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .ignoresSafeArea(edges: .top) // header sits in the title bar row, like Codex
-        .background(Color(nsColor: .textBackgroundColor))
-        .dropDestination(for: URL.self) { urls, _ in
-            guard let url = urls.first else { return false }
-            model.open(url)
-            return true
         }
     }
 }
@@ -279,11 +253,6 @@ struct Sidebar: View {
                 }
             }
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
-        .background(BehindWindowGlass().ignoresSafeArea())
-        // The glass stays active when the window isn't key, so keep the rows at full contrast too.
-        .environment(\.controlActiveState, .active)
     }
 }
 
@@ -368,11 +337,11 @@ struct CommentCard: View {
     }
 }
 
-/// Behind-window material: the desktop shows through the side panels, blurred, like the
-/// classic Mac sidebar and the old Codex app. Liquid Glass only refracts in-window content,
-/// so it can't do this. AppKit swaps in an opaque fill when Reduce Transparency is on.
+/// Behind-window material: the desktop shows through the window, blurred, like the old Codex app.
+/// Liquid Glass only refracts in-window content, so the native floating sidebar sits on top of
+/// this. AppKit swaps in an opaque fill when Reduce Transparency is on.
 /// The material stays active when the window isn't key: a review window usually sits beside the
-/// agent's terminal, and the default (flatten to gray when inactive) made the panels look opaque.
+/// agent's terminal, and the default (flatten to gray when inactive) made it look opaque.
 struct BehindWindowGlass: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -403,8 +372,7 @@ struct ReaderView: NSViewRepresentable {
         let textView = PaperTextView(usingTextLayoutManager: false)
         textView.isEditable = false
         textView.isSelectable = true
-        textView.drawsBackground = true
-        textView.backgroundColor = .textBackgroundColor
+        textView.drawsBackground = false // the SwiftUI frost behind shows through
         textView.isVerticallyResizable = true
         textView.autoresizingMask = [.width]
         textView.textContainer?.widthTracksTextView = true
@@ -415,8 +383,7 @@ struct ReaderView: NSViewRepresentable {
         let scrollView = NSScrollView()
         scrollView.documentView = textView
         scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = true
-        scrollView.backgroundColor = .textBackgroundColor
+        scrollView.drawsBackground = false
         context.coordinator.textView = textView
         return scrollView
     }

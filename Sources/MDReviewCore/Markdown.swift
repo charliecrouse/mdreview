@@ -33,6 +33,7 @@ public enum MarkdownRenderer {
         var inFence = false
         var openParagraph = false
         var gap = false // a blank line precedes the next block
+        var lastSpacing: CGFloat = 0 // paragraphSpacing of the last block appended
         var paragraphStyle = NSMutableParagraphStyle()
 
         let body = NSFont.systemFont(ofSize: bodySize)
@@ -63,6 +64,17 @@ public enum MarkdownRenderer {
             piece.addAttribute(.paragraphStyle, value: paragraph, range: all)
             piece.addAttribute(.sourceLine, value: line, range: all)
             out.append(piece)
+            lastSpacing = paragraph.paragraphSpacing
+        }
+
+        func cells(_ row: String) -> [String] {
+            var row = Substring(row.trimmingCharacters(in: .whitespaces))
+            if row.hasPrefix("|") { row = row.dropFirst() }
+            if row.hasSuffix("|") { row = row.dropLast() }
+            return row.split(separator: "|", omittingEmptySubsequences: false).map { $0.trimmingCharacters(in: .whitespaces) }
+        }
+        func isDivider(_ row: String) -> Bool {
+            row.contains("-") && cells(row).allSatisfy { $0.wholeMatch(of: /:?-+:?/) != nil }
         }
 
         let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
@@ -125,17 +137,30 @@ public enum MarkdownRenderer {
                 p.tabStops = [NSTextTab(textAlignment: .left, location: 26 + depth * 20)]
                 block(item, line: n, paragraph: p)
             } else if trimmed.hasPrefix("|") {
+                // Table row: cells on tab stops; the |---| divider row is rendered away.
                 closeParagraph(line: n - 1)
-                block(NSAttributedString(string: trimmed, attributes: [.font: mono, .foregroundColor: NSColor.textColor]),
-                      line: n, paragraph: style(after: 0))
+                if isDivider(trimmed) { continue }
+                let header = index + 1 < lines.count && isDivider(String(lines[index + 1]))
+                let font = header ? NSFont.systemFont(ofSize: bodySize, weight: .semibold) : body
+                let row = cells(trimmed)
+                let content = NSMutableAttributedString()
+                for (i, cell) in row.enumerated() {
+                    if i > 0 { content.append(NSAttributedString(string: "\t", attributes: [.font: body])) }
+                    content.append(inline(cell, font: font, line: n))
+                }
+                let column: CGFloat = 200
+                let p = style(hang: column * CGFloat(row.count - 1), after: 6)
+                p.tabStops = (1..<max(row.count, 2)).map { NSTextTab(textAlignment: .left, location: column * CGFloat($0)) }
+                block(content, line: n, paragraph: p)
             } else {
                 // Paragraph text: consecutive lines join with a space, like rendered Markdown.
                 let piece = NSMutableAttributedString()
                 if openParagraph { piece.append(NSAttributedString(string: " ")) }
                 piece.append(inline(trimmed, font: body, line: n))
                 let all = NSRange(location: 0, length: piece.length)
-                if !openParagraph { paragraphStyle = style(after: 10) }
+                if !openParagraph { paragraphStyle = style(before: gap && lastSpacing < 10 ? 10 : 0, after: 10) }
                 gap = false
+                lastSpacing = 10
                 piece.addAttribute(.paragraphStyle, value: paragraphStyle, range: all)
                 piece.addAttribute(.sourceLine, value: n, range: all)
                 out.append(piece)

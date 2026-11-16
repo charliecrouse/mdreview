@@ -49,6 +49,15 @@ do { // rendered selections map back to source lines
     check(MarkdownRenderer.range(ofLine: 6, in: rendered.text).map { text.substring(with: $0) }?.hasPrefix("Steps") == true)
 }
 
+do { // tables render as tab-separated cells; the divider row is rendered away
+    let table = MarkdownRenderer.render("| Action | How |\n|---|:--:|\n| Open | ⌘O |\n\nAfter the table.")
+    let text = table.text.string as NSString
+    check(!text.contains("|") && !text.contains("---"), "table syntax rendered away")
+    check(text.contains("Action\tHow") && text.contains("Open\t⌘O"), "cells on tab stops")
+    check(MarkdownRenderer.lineRange(of: text.range(of: "Open"), in: table.text) == 3...3, "row keeps its source line")
+    check(MarkdownRenderer.lineRange(of: text.range(of: "After"), in: table.text) == 5...5)
+}
+
 do { // the review export carries path, lines, quote and comment
     let file = URL(fileURLWithPath: "/tmp/notes/plan.md")
     let comments = [
