@@ -1,64 +1,17 @@
-# mdreview
+<div align="center">
+  <img src="App/Assets.xcassets/AppIcon.appiconset/icon_256.png" width="128" height="128" alt="">
+  <h1>mdreview</h1>
+  <p>Review Markdown like a pull request, then hand the review to your coding agent.</p>
+  <p>A native macOS app · macOS 26 or later · MIT</p>
+</div>
 
-A native macOS app for reviewing Markdown files and handing the review to a coding agent.
+![mdreview showing a rollout plan with two comments in the inspector](docs/images/screenshot.png)
 
-You open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers. **Send to Agent** batches the comments into one Markdown review: file path, line ranges, the quoted text and your comment.
+## What it does
 
-The whole window is glass. A behind-window material lets the desktop show through, blurred, and the native sidebar floats on top of it. The document sits on a dense frosted layer, so body text stays legible over busy wallpapers. Reduce Transparency or Increase Contrast make it opaque.
+Open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers, so an agent knows exactly where to look.
 
-## Requirements
-
-- macOS 26 (Tahoe) or later
-- Xcode 26 (Swift 6.2). `swift test` and the `.app` need full Xcode; the Command Line Tools alone can build and run
-- [Homebrew](https://brew.sh). `make bootstrap` installs the dev tools in `Brewfile`: [XcodeGen](https://github.com/yonaskolb/XcodeGen), [SwiftLint](https://github.com/realm/SwiftLint) and [Periphery](https://github.com/peripheryapp/periphery)
-
-## Build and run
-
-```sh
-swift build
-swift run mdreview path/to/file.md
-```
-
-You can also run it without a file, then use **File → Open…** (⌘O) or drag a `.md` file onto the window. Try it on this README with `swift run mdreview README.md`.
-
-`make app` builds a signed (ad-hoc) Release `build/mdreview.app` with its icon.
-
-## Development
-
-Plain `make`. On a fresh clone, run `make bootstrap`, then `make check`. `swift format` ships with the Swift 6.2 toolchain; the other tools come from the `Brewfile`.
-
-| Target | What it does |
-|---|---|
-| `make bootstrap` | Install the `Brewfile` tools, check that `xcode-select` points at Xcode, then `make hooks` and `make project`. Safe to rerun |
-| `make build` | `swift build` |
-| `make run FILE=README.md` | Build and open a file (`FILE` is optional) |
-| `make test` | `swift test`: the `MDReviewCoreTests` unit tests (Swift Testing) |
-| `make lint` | `swift format lint --strict`, then `swiftlint lint --strict` (rules in `.swiftlint.yml`); fails on violations |
-| `make format` | Rewrite sources with `swift format` |
-| `make deadcode` | `periphery scan --strict`: fails on unused code (config in `.periphery.yml`) |
-| `make docs-check` | Fails when this README's `make` table or Layout section disagrees with the Makefile or the tree |
-| `make check` | `lint`, `test`, `deadcode`, then `docs-check` |
-| `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
-| `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
-| `make app` | Release build into `build/mdreview.app` |
-| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent |
-
-Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. The app's bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
-
-`make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
-
-## Using it
-
-| Action | How |
-|---|---|
-| Open a file | ⌘O, or drop a `.md` file on the window |
-| Comment on a selection | Select text, then press ⌥⌘M. You can also right-click → **Add Comment**, or use the toolbar's comment button. |
-| Edit or delete a comment | Type in its card in the inspector, or click the trash icon |
-| Jump to a comment or heading | Click it in the inspector or the sidebar |
-| Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
-| Send to Agent | Press ⌘↩ or use the toolbar button |
-
-**Send to Agent** is a local handoff in this version. It copies the review to the clipboard and also saves it next to the file as `<name>.review.md`. The saved file is overwritten on each send. Paste the review into Claude Code, Codex or another agent, or point the agent at the saved file:
+**Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it next to the file as `<name>.review.md`. Paste it into Claude Code, Codex or any other agent, or point the agent at the file:
 
 ```markdown
 # Review of plan.md
@@ -79,6 +32,64 @@ Name the actual flag.
 What's the rollback?
 ```
 
+The window is glass: the desktop shows through, blurred, while the document sits on a dense frosted layer so text stays legible. Reduce Transparency or Increase Contrast make it opaque.
+
+## Install
+
+There's no prebuilt download yet; build it from source. You need macOS 26 (Tahoe) and Xcode 26 (Swift 6.2). From a clone of this repository (the file argument is optional):
+
+```sh
+swift run mdreview README.md
+```
+
+For a standalone app, run `make bootstrap` once, then `make app`. It builds an ad-hoc signed `build/mdreview.app` with its icon; drag it to `/Applications`.
+
+## Usage
+
+| Action | How |
+|---|---|
+| Open a file | ⌘O, or drop a `.md` file on the window |
+| Comment on a selection | Select text, then press ⌥⌘M. Right-click → **Add Comment** and the toolbar button work too |
+| Edit or delete a comment | Type in its card in the inspector, or click the trash icon |
+| Jump to a comment or heading | Click it in the inspector or the sidebar |
+| Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
+| Send to Agent | ⌘↩, or the toolbar button. Overwrites `<name>.review.md` on each send |
+
+## Limitations
+
+- Comments live in memory. The saved `.review.md` is the only thing written to disk, and it isn't loaded back.
+- One file at a time, and the Markdown is read-only.
+- Send to Agent is clipboard plus file; there are no direct agent integrations.
+- Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
+- Inline formatting that spans a soft line break (`**bold` on one line, `text**` on the next) renders literally. The renderer works line by line so every selection maps to exact source lines.
+- The `.app` is ad-hoc signed for local use: no Developer ID, notarization or DMG.
+
+## Development
+
+On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Homebrew](https://brew.sh) and installs the tools in `Brewfile`: [XcodeGen](https://github.com/yonaskolb/XcodeGen), [SwiftLint](https://github.com/realm/SwiftLint) and [Periphery](https://github.com/peripheryapp/periphery). `swift format` ships with the toolchain. `swift test` and the `.app` need full Xcode; the Command Line Tools alone can build and run.
+
+| Target | What it does |
+|---|---|
+| `make bootstrap` | Install the `Brewfile` tools, check that `xcode-select` points at Xcode, then `make hooks` and `make project`. Safe to rerun |
+| `make build` | `swift build` |
+| `make run FILE=README.md` | Build and open a file (`FILE` is optional) |
+| `make test` | `swift test`: the `MDReviewCoreTests` unit tests (Swift Testing) |
+| `make lint` | `swift format lint --strict`, then `swiftlint lint --strict` (rules in `.swiftlint.yml`); fails on violations |
+| `make format` | Rewrite sources with `swift format` |
+| `make deadcode` | `periphery scan --strict`: fails on unused code (config in `.periphery.yml`) |
+| `make docs-check` | Fails when this README's `make` table or Layout section disagrees with the Makefile or the tree |
+| `make check` | `lint`, `test`, `deadcode`, then `docs-check`. Must pass before every commit |
+| `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
+| `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
+| `make app` | Release build into `build/mdreview.app` |
+| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent |
+
+Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
+
+`make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
+
+[AGENTS.md](AGENTS.md) has the house rules for contributors, human or agent.
+
 ## Layout
 
 - `Sources/MDReviewCore/`
@@ -95,15 +106,6 @@ What's the rollback?
 - `App/`: the app's asset catalog (icon). `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
 - `scripts/docs-check.sh`: the README freshness check behind `make docs-check`.
-
-## Not yet
-
-- Comments live in memory. The saved `.review.md` is the only thing written to disk, and it isn't loaded back.
-- One file at a time, and the Markdown is read-only.
-- No direct agent integrations; Send to Agent is clipboard plus file only.
-- Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
-- Inline formatting that spans a soft line break (for example `**bold` on one line and `text**` on the next) renders literally. The renderer works line by line so that every selection maps to exact source lines.
-- The `.app` is ad-hoc signed for local use only: no Developer ID, notarization or DMG.
 
 ## License
 
