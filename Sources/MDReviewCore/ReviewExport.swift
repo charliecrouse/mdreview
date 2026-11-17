@@ -11,11 +11,12 @@ public enum ReviewExport {
             Comments: \(comments.count). Line numbers refer to the file above. Address each comment.
 
             """
-        for (i, c) in comments.sorted(by: { $0.lines.lowerBound < $1.lines.lowerBound }).enumerated() {
-            let quote = c.quote.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(
+        for (index, comment) in comments.sorted(by: { $0.lines.lowerBound < $1.lines.lowerBound }).enumerated() {
+            let quote = comment.quote.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(
                 separator: "\n")
-            let body = c.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            out += "\n## \(i + 1). \(name):\(c.lineLabel)\n\n\(quote)\n\n\(body.isEmpty ? "_(no comment)_" : body)\n"
+            let body = comment.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = body.isEmpty ? "_(no comment)_" : body
+            out += "\n## \(index + 1). \(name):\(comment.lineLabel)\n\n\(quote)\n\n\(text)\n"
         }
         return out
     }

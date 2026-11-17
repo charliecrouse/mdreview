@@ -1,0 +1,46 @@
+included: [Sources, Tests, UITests]
+excluded: [.build, build]
+
+disabled_rules:
+  - trailing_comma            # swift-format adds them
+  - opening_brace             # swift-format owns brace placement when it wraps a signature
+
+opt_in_rules:
+  # safety
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - fatal_error_message
+  - unhandled_throwing_task
+  - discarded_notification_center_observer
+  - weak_delegate
+  - overridden_super_call
+  - prohibited_super_call
+  # idioms (cheap, near-zero false positives)
+  - empty_count
+  - empty_string
+  - first_where
+  - last_where
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - sorted_first_last
+  - toggle_bool
+  - reduce_into
+  - flatmap_over_map_reduce
+  - identical_operands
+  - yoda_condition
+  - explicit_init
+  - direct_return
+  - prefer_self_type_over_type_of_self
+  # access control and SwiftUI
+  - lower_acl_than_parent
+  - private_swiftui_state
+  - accessibility_label_for_image
+  - accessibility_trait_for_button
+
+line_length: 120                       # same as .swift-format
+# Defaults, stated so nobody "tunes" them quietly:
+file_length: { warning: 400, error: 1000 }
+type_body_length: { warning: 250, error: 350 }
+function_body_length: { warning: 50, error: 100 }
+cyclomatic_complexity: { warning: 10, error: 20, ignores_case_statements: true }

@@ -19,7 +19,7 @@ struct CommentCard: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button(role: .destructive, action: onDelete) {
-                    Image(systemName: "trash")
+                    Label("Delete comment", systemImage: "trash").labelStyle(.iconOnly)
                 }
                 .buttonStyle(.borderless)
                 .help("Delete comment")
@@ -44,5 +44,6 @@ struct CommentCard: View {
         )
         .contentShape(.rect)
         .onTapGesture(perform: onSelect)
+        .accessibilityAddTraits(.isButton)
     }
 }

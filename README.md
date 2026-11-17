@@ -11,6 +11,7 @@ The whole window is glass. A behind-window material lets the desktop show throug
 - macOS 26 (Tahoe) or later
 - Xcode 26 (Swift 6.2). `swift test` and the `.app` need full Xcode; the Command Line Tools alone can build and run
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) for the `.app`: `brew install xcodegen`
+- [SwiftLint](https://github.com/realm/SwiftLint) for `make lint`: `brew install swiftlint`
 
 ## Build and run
 
@@ -25,14 +26,14 @@ You can also run it without a file, then use **File → Open…** (⌘O) or drag
 
 ## Development
 
-Plain `make`. `swift format` ships with the Swift 6.2 toolchain; the Xcode targets also need XcodeGen.
+Plain `make`. `swift format` ships with the Swift 6.2 toolchain; `make lint` also needs SwiftLint and the Xcode targets need XcodeGen.
 
 | Target | What it does |
 |---|---|
 | `make build` | `swift build` |
 | `make run FILE=README.md` | Build and open a file (`FILE` is optional) |
 | `make test` | `swift test`: the `MDReviewCoreTests` unit tests (Swift Testing) |
-| `make lint` | `swift format lint --strict`; fails on violations |
+| `make lint` | `swift format lint --strict`, then `swiftlint lint --strict` (rules in `.swiftlint.yml`); fails on violations |
 | `make format` | Rewrite sources with `swift format` |
 | `make check` | `lint` then `test` |
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
@@ -40,7 +41,7 @@ Plain `make`. `swift format` ships with the Swift 6.2 toolchain; the Xcode targe
 | `make app` | Release build into `build/mdreview.app` |
 | `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent |
 
-Style lives in `.swift-format` and `.editorconfig`. The app's bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
+Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. The app's bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 
 `make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
 

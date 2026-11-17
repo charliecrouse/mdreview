@@ -13,8 +13,10 @@ run:
 test:
 	swift test
 
+# Needs SwiftLint: brew install swiftlint
 lint:
 	swift format lint --strict -r $(SRC)
+	swiftlint lint --strict --quiet
 
 format:
 	swift format format -i -r $(SRC)

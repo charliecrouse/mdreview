@@ -9,30 +9,30 @@ public enum MarkdownRenderer {
         var doc = Builder(bodySize: bodySize)
         let lines = source.split(separator: "\n", omittingEmptySubsequences: false)
         for (index, rawLine) in lines.enumerated() {
-            let n = index + 1
+            let lineNumber = index + 1
             var line = String(rawLine)
             if line.hasSuffix("\r") { line.removeLast() }
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") {
-                doc.toggleFence(line: n)
+                doc.toggleFence(line: lineNumber)
             } else if doc.inFence {
-                doc.fenceLine(line, line: n)
+                doc.fenceLine(line, line: lineNumber)
             } else if trimmed.isEmpty {
-                doc.blankLine(line: n)
-            } else if let m = trimmed.wholeMatch(of: /(#{1,6})\s+(.*?)\s*#*/) {
-                doc.heading(level: m.1.count, title: String(m.2), line: n)
+                doc.blankLine(line: lineNumber)
+            } else if let match = trimmed.wholeMatch(of: /(#{1,6})\s+(.*?)\s*#*/) {
+                doc.heading(level: match.1.count, title: String(match.2), line: lineNumber)
             } else if trimmed.wholeMatch(of: /([-*_])(\s*\1){2,}/) != nil {
-                doc.rule(line: n)
-            } else if let m = trimmed.wholeMatch(of: />\s?(.*)/) {
-                doc.quote(String(m.1), line: n)
-            } else if let m = line.wholeMatch(of: /(\s*)([-*+]|\d+[.)])\s+(.*)/) {
-                doc.listItem(indent: m.1.count, marker: String(m.2), text: String(m.3), line: n)
+                doc.rule(line: lineNumber)
+            } else if let match = trimmed.wholeMatch(of: />\s?(.*)/) {
+                doc.quote(String(match.1), line: lineNumber)
+            } else if let match = line.wholeMatch(of: /(\s*)([-*+]|\d+[.)])\s+(.*)/) {
+                doc.listItem(indent: match.1.count, marker: String(match.2), text: String(match.3), line: lineNumber)
             } else if trimmed.hasPrefix("|") {
                 let isHeader = index + 1 < lines.count && isDivider(String(lines[index + 1]))
-                doc.tableRow(trimmed, isHeader: isHeader, line: n)
+                doc.tableRow(trimmed, isHeader: isHeader, line: lineNumber)
             } else {
-                doc.paragraphLine(trimmed, line: n)
+                doc.paragraphLine(trimmed, line: lineNumber)
             }
         }
         doc.closeParagraph(line: max(lines.count, 1))
@@ -42,15 +42,15 @@ public enum MarkdownRenderer {
     /// Inclusive 1-based source line range covered by a rendered character range.
     public static func lineRange(of range: NSRange, in text: NSAttributedString) -> ClosedRange<Int>? {
         guard range.length > 0, NSMaxRange(range) <= text.length else { return nil }
-        var lo = Int.max
-        var hi = Int.min
+        var lower = Int.max
+        var upper = Int.min
         text.enumerateAttribute(.sourceLine, in: range) { value, _, _ in
-            if let n = value as? Int {
-                lo = min(lo, n)
-                hi = max(hi, n)
+            if let line = value as? Int {
+                lower = min(lower, line)
+                upper = max(upper, line)
             }
         }
-        return lo <= hi ? lo...hi : nil
+        return lower <= upper ? lower...upper : nil
     }
 
     /// Rendered range of the first characters produced by `line`.
@@ -99,13 +99,13 @@ public enum MarkdownRenderer {
         func style(indent: CGFloat = 0, hang: CGFloat = 0, before: CGFloat = 0, after: CGFloat = 8)
             -> NSMutableParagraphStyle
         {
-            let p = NSMutableParagraphStyle()
-            p.lineHeightMultiple = 1.3
-            p.firstLineHeadIndent = indent
-            p.headIndent = indent + hang
-            p.paragraphSpacingBefore = before
-            p.paragraphSpacing = after
-            return p
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.lineHeightMultiple = 1.3
+            paragraph.firstLineHeadIndent = indent
+            paragraph.headIndent = indent + hang
+            paragraph.paragraphSpacingBefore = before
+            paragraph.paragraphSpacing = after
+            return paragraph
         }
 
         mutating func closeParagraph(line: Int) {
@@ -159,12 +159,12 @@ public enum MarkdownRenderer {
 
         mutating func rule(line: Int) {
             closeParagraph(line: line - 1)
-            let p = style(after: 10)
-            p.alignment = .center
+            let paragraph = style(after: 10)
+            paragraph.alignment = .center
             block(
                 NSAttributedString(
                     string: "· · ·", attributes: [.font: body, .foregroundColor: NSColor.tertiaryLabelColor]),
-                line: line, paragraph: p)
+                line: line, paragraph: paragraph)
         }
 
         mutating func quote(_ text: String, line: Int) {
@@ -187,9 +187,9 @@ public enum MarkdownRenderer {
             let item = NSMutableAttributedString(
                 string: marker + "\t", attributes: [.font: body, .foregroundColor: NSColor.secondaryLabelColor])
             item.append(inline(text, font: body, line: line))
-            let p = style(indent: 6 + depth * 20, hang: 20, after: 3)
-            p.tabStops = [NSTextTab(textAlignment: .left, location: 26 + depth * 20)]
-            block(item, line: line, paragraph: p)
+            let paragraph = style(indent: 6 + depth * 20, hang: 20, after: 3)
+            paragraph.tabStops = [NSTextTab(textAlignment: .left, location: 26 + depth * 20)]
+            block(item, line: line, paragraph: paragraph)
         }
 
         /// Cells on tab stops; the |---| divider row is rendered away.
@@ -199,16 +199,16 @@ public enum MarkdownRenderer {
             let font = isHeader ? NSFont.systemFont(ofSize: bodySize, weight: .semibold) : body
             let row = cells(text)
             let content = NSMutableAttributedString()
-            for (i, cell) in row.enumerated() {
-                if i > 0 { content.append(NSAttributedString(string: "\t", attributes: [.font: body])) }
+            for (column, cell) in row.enumerated() {
+                if column > 0 { content.append(NSAttributedString(string: "\t", attributes: [.font: body])) }
                 content.append(inline(cell, font: font, line: line))
             }
-            let column: CGFloat = 200
-            let p = style(hang: column * CGFloat(row.count - 1), after: 6)
-            p.tabStops = (1..<max(row.count, 2)).map {
-                NSTextTab(textAlignment: .left, location: column * CGFloat($0))
+            let columnWidth: CGFloat = 200
+            let paragraph = style(hang: columnWidth * CGFloat(row.count - 1), after: 6)
+            paragraph.tabStops = (1..<max(row.count, 2)).map {
+                NSTextTab(textAlignment: .left, location: columnWidth * CGFloat($0))
             }
-            block(content, line: line, paragraph: p)
+            block(content, line: line, paragraph: paragraph)
         }
 
         /// Consecutive lines join with a space, like rendered Markdown.
