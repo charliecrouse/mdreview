@@ -100,3 +100,7 @@ What's the rollback?
 - Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
 - Inline formatting that spans a soft line break (for example `**bold` on one line and `text**` on the next) renders literally. The renderer works line by line so that every selection maps to exact source lines.
 - The `.app` is ad-hoc signed for local use only: no Developer ID, notarization or DMG.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
