@@ -1,7 +1,13 @@
 SRC := Sources Tests UITests Package.swift
 XCODE := xcodebuild -project mdreview.xcodeproj -scheme mdreview -derivedDataPath build/DerivedData
 
-.PHONY: build run test lint format deadcode docs-check check hooks project app uitest
+.PHONY: bootstrap build run test lint format deadcode docs-check check hooks project app uitest
+
+# The Command Line Tools can't run `swift test` or xcodebuild, so fail early unless Xcode is selected.
+bootstrap:
+	brew bundle --file=Brewfile
+	@xcode-select -p | grep -q '\.app/' || { echo "bootstrap: xcode-select points at $$(xcode-select -p), not Xcode. Install Xcode 26, then run: sudo xcode-select -s /Applications/Xcode.app" >&2; exit 1; }
+	$(MAKE) hooks project
 
 build:
 	swift build
@@ -13,7 +19,6 @@ run:
 test:
 	swift test
 
-# Needs SwiftLint: brew install swiftlint
 lint:
 	swift format lint --strict -r $(SRC)
 	swiftlint lint --strict --quiet
@@ -21,7 +26,6 @@ lint:
 format:
 	swift format format -i -r $(SRC)
 
-# Needs Periphery: brew install periphery
 deadcode:
 	periphery scan --strict --quiet
 
@@ -33,7 +37,6 @@ check: lint test deadcode docs-check
 hooks:
 	git config core.hooksPath .githooks
 
-# Needs XcodeGen: brew install xcodegen
 project:
 	xcodegen generate
 

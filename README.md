@@ -10,9 +10,7 @@ The whole window is glass. A behind-window material lets the desktop show throug
 
 - macOS 26 (Tahoe) or later
 - Xcode 26 (Swift 6.2). `swift test` and the `.app` need full Xcode; the Command Line Tools alone can build and run
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) for the `.app`: `brew install xcodegen`
-- [SwiftLint](https://github.com/realm/SwiftLint) for `make lint`: `brew install swiftlint`
-- [Periphery](https://github.com/peripheryapp/periphery) for `make deadcode`: `brew install periphery`
+- [Homebrew](https://brew.sh). `make bootstrap` installs the dev tools in `Brewfile`: [XcodeGen](https://github.com/yonaskolb/XcodeGen), [SwiftLint](https://github.com/realm/SwiftLint) and [Periphery](https://github.com/peripheryapp/periphery)
 
 ## Build and run
 
@@ -27,10 +25,11 @@ You can also run it without a file, then use **File → Open…** (⌘O) or drag
 
 ## Development
 
-Plain `make`. `swift format` ships with the Swift 6.2 toolchain; `make lint` also needs SwiftLint, `make deadcode` needs Periphery, and the Xcode targets need XcodeGen.
+Plain `make`. On a fresh clone, run `make bootstrap`, then `make check`. `swift format` ships with the Swift 6.2 toolchain; the other tools come from the `Brewfile`.
 
 | Target | What it does |
 |---|---|
+| `make bootstrap` | Install the `Brewfile` tools, check that `xcode-select` points at Xcode, then `make hooks` and `make project`. Safe to rerun |
 | `make build` | `swift build` |
 | `make run FILE=README.md` | Build and open a file (`FILE` is optional) |
 | `make test` | `swift test`: the `MDReviewCoreTests` unit tests (Swift Testing) |
