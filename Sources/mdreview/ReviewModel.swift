@@ -14,6 +14,10 @@ final class ReviewModel {
     var scrollTarget: NSRange?
     var status: String?
     var error: String?
+    /// The open file was deleted or moved away; the last version stays on screen until it comes back.
+    var isMissing = false
+    @ObservationIgnored private var source = ""
+    @ObservationIgnored private var watcher: FileWatcher?
 
     @ObservationIgnored private let store = ReviewModel.makeStore()
     /// Off while the open file's saved record couldn't be read or moved aside, so saving can't overwrite it.
@@ -26,14 +30,34 @@ final class ReviewModel {
         do {
             let source = try String(contentsOf: url, encoding: .utf8)
             fileURL = url
+            self.source = source
             rendered = MarkdownRenderer.render(source)
             status = nil
-            comments = loadComments(for: url)
+            comments = loadComments(for: url).map { $0.reanchored(in: rendered.text) }
+            sortComments()
             selection = NSRange(location: 0, length: 0)
             focusedComment = nil
+            isMissing = false
+            watcher = FileWatcher(url: url) { [weak self] in self?.reload() }
         } catch {
             self.error = "Couldn't open \(url.lastPathComponent): \(error.localizedDescription)"
         }
+    }
+
+    /// Re-renders after an outside edit and moves each comment to follow its text.
+    private func reload() {
+        guard let url = fileURL else { return }
+        guard let source = try? String(contentsOf: url, encoding: .utf8) else {
+            isMissing = !FileManager.default.fileExists(atPath: url.path)
+            return
+        }
+        isMissing = false
+        guard source != self.source else { return }
+        self.source = source
+        rendered = MarkdownRenderer.render(source)
+        selection = NSRange(location: 0, length: 0)
+        comments = comments.map { $0.reanchored(in: rendered.text) }
+        sortComments()
     }
 
     func showOpenPanel() {
@@ -48,8 +72,12 @@ final class ReviewModel {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let comment = ReviewComment(lines: lines, quote: quote, range: selection)
         comments.append(comment)
-        comments.sort { ($0.lines.lowerBound, $0.range.location) < ($1.lines.lowerBound, $1.range.location) }
+        sortComments()
         focusedComment = comment.id
+    }
+
+    private func sortComments() {
+        comments.sort { ($0.lines.lowerBound, $0.range.location) < ($1.lines.lowerBound, $1.range.location) }
     }
 
     func delete(_ id: ReviewComment.ID) {
@@ -59,7 +87,7 @@ final class ReviewModel {
 
     func reveal(_ comment: ReviewComment) {
         focusedComment = comment.id
-        scrollTarget = comment.range
+        if !comment.isOutdated { scrollTarget = comment.range }
     }
 
     func reveal(line: Int) {

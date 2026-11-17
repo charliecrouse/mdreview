@@ -24,6 +24,7 @@ struct ContentView: View {
                     }
                 } else {
                     ReaderView(
+                        file: model.fileURL,
                         text: model.rendered.text,
                         comments: model.comments,
                         focused: model.focusedComment,
@@ -32,6 +33,20 @@ struct ContentView: View {
                         onComment: { model.addComment() },
                         onScrolled: { model.scrollTarget = nil }
                     )
+                    .overlay(alignment: .top) {
+                        if model.isMissing {
+                            Label(
+                                "The file was deleted or moved. This is its last version; it reloads if the file "
+                                    + "comes back.", systemImage: "exclamationmark.triangle"
+                            )
+                            .font(.callout)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .glassEffect()
+                            .padding(12)
+                            .accessibilityIdentifier("fileMissing")
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

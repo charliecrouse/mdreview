@@ -9,6 +9,11 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     public var text: String
     /// Rendered character range, used to highlight the anchor while the file is open.
     public var range: NSRange
+    /// The quoted text is no longer in the file, so `lines` and `range` point at an earlier version.
+    public var isOutdated = false
+
+    /// `isOutdated` is left out: opening a file re-anchors its saved comments, which sets it again.
+    private enum CodingKeys: String, CodingKey { case id, lines, quote, text, range }
 
     public init(id: UUID = UUID(), lines: ClosedRange<Int>, quote: String, text: String = "", range: NSRange) {
         self.id = id
