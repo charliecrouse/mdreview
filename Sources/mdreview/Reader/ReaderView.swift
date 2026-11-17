@@ -3,6 +3,7 @@ import MDReviewCore
 import SwiftUI
 
 struct ReaderView: NSViewRepresentable {
+    let file: URL?
     let text: NSAttributedString
     let comments: [ReviewComment]
     let focused: ReviewComment.ID?
@@ -40,9 +41,15 @@ struct ReaderView: NSViewRepresentable {
         coordinator.parent = self
         guard let textView = coordinator.textView else { return }
         if coordinator.shownText !== text {
+            // A reload of the same file keeps the scroll offset; a newly opened file starts at the top.
+            let offset = coordinator.shownFile == file ? scrollView.contentView.bounds.origin : .zero
             textView.textStorage?.setAttributedString(text)
             coordinator.shownText = text
-            textView.scroll(.zero)
+            coordinator.shownFile = file
+            if let layout = textView.layoutManager, let container = textView.textContainer {
+                layout.ensureLayout(for: container)
+            }
+            textView.scroll(offset)
         }
         coordinator.highlight(comments, focused: focused)
         if let target = scrollTarget {
@@ -56,6 +63,7 @@ struct ReaderView: NSViewRepresentable {
         var parent: ReaderView?
         weak var textView: NSTextView?
         var shownText: NSAttributedString?
+        var shownFile: URL?
 
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let textView else { return }
@@ -79,7 +87,7 @@ struct ReaderView: NSViewRepresentable {
             let all = NSRange(location: 0, length: length)
             layout.removeTemporaryAttribute(.backgroundColor, forCharacterRange: all)
             layout.removeTemporaryAttribute(.underlineStyle, forCharacterRange: all)
-            for comment in comments where NSMaxRange(comment.range) <= length {
+            for comment in comments where !comment.isOutdated && NSMaxRange(comment.range) <= length {
                 layout.addTemporaryAttributes(
                     [
                         .backgroundColor: NSColor.controlAccentColor.withAlphaComponent(

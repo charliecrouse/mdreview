@@ -9,6 +9,8 @@ public struct ReviewComment: Identifiable, Hashable, Sendable {
     public var text: String
     /// Rendered character range, used to highlight the anchor while the file is open.
     public var range: NSRange
+    /// The quoted text is no longer in the file, so `lines` and `range` point at an earlier version.
+    public var isOutdated = false
 
     public init(id: UUID = UUID(), lines: ClosedRange<Int>, quote: String, text: String = "", range: NSRange) {
         self.id = id

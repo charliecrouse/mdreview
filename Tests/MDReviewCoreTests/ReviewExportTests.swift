@@ -15,3 +15,14 @@ import Testing
     #expect(review.contains("## 2. plan.md:9\n\n> Backfill\n\nWhich workspaces?\n"))
     #expect(ReviewExport.reviewURL(for: file).path == "/tmp/notes/plan.review.md")
 }
+
+@Test func reviewExportLabelsOutdatedComments() {
+    var outdated = ReviewComment(lines: 2...2, quote: "Old text", text: "Still relevant?", range: NSRange())
+    outdated.isOutdated = true
+    let fresh = ReviewExport.markdown(file: URL(fileURLWithPath: "/tmp/plan.md"), comments: [])
+    let review = ReviewExport.markdown(file: URL(fileURLWithPath: "/tmp/plan.md"), comments: [outdated])
+
+    #expect(!fresh.contains("Outdated"))
+    #expect(review.contains("Outdated comments quote text the file no longer contains"))
+    #expect(review.contains("## 1. plan.md:2 (outdated)\n\n> Old text\n\nStill relevant?\n"))
+}
