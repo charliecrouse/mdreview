@@ -53,6 +53,14 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     #expect(rewritten.isOutdated && rewritten.lines == 5...5)
 }
 
+@Test func editsAboveAndBelowInOneWriteKeepTheCommentOnItsOccurrence() throws {
+    let source = "Title\n\nShip it.\n\nShip it.\n\nEnd\n"
+    let second = try comment(on: "Ship it", in: source, occurrence: 1)
+    let moved = second.reanchored(from: render(source), to: render("Title!\n\nShip it.\n\nShip it.\n\nEnd!\n"))
+    #expect(!moved.isOutdated && moved.lines == 5...5)
+    #expect(moved.range.location == second.range.location + 1)
+}
+
 @Test func reopenWithDuplicatedQuoteKeepsAnUnmovedCommentAndOutdatesAMovedOne() throws {
     let source = "Ship it.\n\nShip it.\n"
     let second = try comment(on: "Ship it", in: source, occurrence: 1)

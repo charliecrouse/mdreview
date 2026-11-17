@@ -9,13 +9,14 @@ extension ReviewComment {
         if !isOutdated, NSMaxRange(range) <= string.length, string.substring(with: range) == quote {
             return anchored(at: range, in: text)
         }
-        let matches = occurrences(in: string, within: NSRange(location: 0, length: string.length))
+        let matches = Self.occurrences(of: quote, in: string)
         return matches.count == 1 ? anchored(at: matches[0], in: text) : outdated()
     }
 
     /// The comment carried from `old` to `new` through the one span that changed between them:
-    /// it keeps its offset before the change, shifts with the text after it, and is searched for
-    /// only within the change when it overlaps it, so it can't jump to another copy of its quote.
+    /// it keeps its offset before the change and shifts with the text after it. When it overlaps the change,
+    /// it follows the shortest text before or after it that was unique in `old`, and is outdated unless
+    /// that text occurs exactly once in `new`, so it can't jump to another copy of its quote.
     public func reanchored(from old: NSAttributedString, to new: NSAttributedString) -> ReviewComment {
         if isOutdated { return reanchored(in: new) }
         let oldString = old.string as NSString
@@ -35,20 +36,37 @@ extension ReviewComment {
         if range.location >= oldString.length - suffix {
             return anchored(at: NSRange(location: range.location + delta, length: range.length), in: new)
         }
-        let start = min(range.location, prefix)
-        let end = max(NSMaxRange(range) + delta, newString.length - suffix)
-        let window = NSRange(location: start, length: min(end, newString.length) - start)
-        return occurrences(in: newString, within: window).first.map { anchored(at: $0, in: new) } ?? outdated()
+        for location in [range.location, range.location + delta] {
+            let candidate = NSRange(location: location, length: range.length)
+            if NSMaxRange(candidate) <= newString.length, newString.substring(with: candidate) == quote {
+                return anchored(at: candidate, in: new)
+            }
+        }
+        for (before, after) in [(1, 0), (0, 1)] {
+            var context = range
+            while Self.occurrences(of: oldString.substring(with: context), in: oldString).count > 1,
+                context.location >= before, NSMaxRange(context) + after <= oldString.length
+            {
+                context = NSRange(location: context.location - before, length: context.length + before + after)
+            }
+            let text = oldString.substring(with: context)
+            let matches = Self.occurrences(of: text, in: newString)
+            if matches.count == 1, Self.occurrences(of: text, in: oldString).count == 1 {
+                let location = matches[0].location + range.location - context.location
+                return anchored(at: NSRange(location: location, length: range.length), in: new)
+            }
+        }
+        return outdated()
     }
 
-    private func occurrences(in string: NSString, within window: NSRange) -> [NSRange] {
+    private static func occurrences(of target: String, in string: NSString) -> [NSRange] {
         var matches: [NSRange] = []
-        var search = window
+        var search = NSRange(location: 0, length: string.length)
         while true {
-            let match = string.range(of: quote, options: .literal, range: search)
+            let match = string.range(of: target, options: .literal, range: search)
             if match.location == NSNotFound { return matches }
             matches.append(match)
-            search = NSRange(location: match.location + 1, length: NSMaxRange(window) - match.location - 1)
+            search = NSRange(location: match.location + 1, length: string.length - match.location - 1)
         }
     }
 
