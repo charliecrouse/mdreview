@@ -2,8 +2,8 @@ import AppKit
 
 /// Line-oriented Markdown renderer. Each source line is rendered on its own and tagged with
 /// `.sourceLine`, so any rendered selection maps back to exact source lines.
-/// ponytail: block structure is parsed line by line (headings, lists, quotes, fences, tables, rules);
-/// inline spans that cross a soft line break render literally. Swap in swift-markdown if that matters.
+/// Limitation: block structure is parsed line by line (headings, lists, quotes, fences, tables, rules),
+/// so inline spans that cross a soft line break render literally.
 public enum MarkdownRenderer {
     public static func render(_ source: String, bodySize: CGFloat = 15) -> RenderedMarkdown {
         var doc = Builder(bodySize: bodySize)

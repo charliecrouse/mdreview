@@ -62,7 +62,7 @@ final class ReviewModel {
         }
     }
 
-    /// v1 "send": copy the batched review to the clipboard and save it beside the file.
+    /// Copies the batched review to the clipboard and saves it beside the file.
     func send() {
         guard let url = fileURL, !comments.isEmpty else { return }
         let review = ReviewExport.markdown(file: url, comments: comments)
