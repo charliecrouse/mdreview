@@ -1,0 +1,2 @@
+# Scans the SwiftPM package (Package.swift), which covers the app and core sources without XcodeGen.
+retain_swift_ui_previews: true

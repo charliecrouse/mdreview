@@ -12,6 +12,7 @@ The whole window is glass. A behind-window material lets the desktop show throug
 - Xcode 26 (Swift 6.2). `swift test` and the `.app` need full Xcode; the Command Line Tools alone can build and run
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) for the `.app`: `brew install xcodegen`
 - [SwiftLint](https://github.com/realm/SwiftLint) for `make lint`: `brew install swiftlint`
+- [Periphery](https://github.com/peripheryapp/periphery) for `make deadcode`: `brew install periphery`
 
 ## Build and run
 
@@ -26,7 +27,7 @@ You can also run it without a file, then use **File → Open…** (⌘O) or drag
 
 ## Development
 
-Plain `make`. `swift format` ships with the Swift 6.2 toolchain; `make lint` also needs SwiftLint and the Xcode targets need XcodeGen.
+Plain `make`. `swift format` ships with the Swift 6.2 toolchain; `make lint` also needs SwiftLint, `make deadcode` needs Periphery, and the Xcode targets need XcodeGen.
 
 | Target | What it does |
 |---|---|
@@ -35,7 +36,8 @@ Plain `make`. `swift format` ships with the Swift 6.2 toolchain; `make lint` als
 | `make test` | `swift test`: the `MDReviewCoreTests` unit tests (Swift Testing) |
 | `make lint` | `swift format lint --strict`, then `swiftlint lint --strict` (rules in `.swiftlint.yml`); fails on violations |
 | `make format` | Rewrite sources with `swift format` |
-| `make check` | `lint` then `test` |
+| `make deadcode` | `periphery scan --strict`: fails on unused code (config in `.periphery.yml`) |
+| `make check` | `lint`, `test`, then `deadcode` |
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
