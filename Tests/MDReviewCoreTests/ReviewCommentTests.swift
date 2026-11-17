@@ -53,12 +53,29 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     #expect(rewritten.isOutdated && rewritten.lines == 5...5)
 }
 
-@Test func editsAboveAndBelowInOneWriteKeepTheCommentOnItsOccurrence() throws {
+@Test func editsAboveAndBelowInOneWriteOutdateADuplicatedQuoteBetweenThem() throws {
     let source = "Title\n\nShip it.\n\nShip it.\n\nEnd\n"
     let second = try comment(on: "Ship it", in: source, occurrence: 1)
     let moved = second.reanchored(from: render(source), to: render("Title!\n\nShip it.\n\nShip it.\n\nEnd!\n"))
-    #expect(!moved.isOutdated && moved.lines == 5...5)
-    #expect(moved.range.location == second.range.location + 1)
+    #expect(moved.isOutdated && moved.range == second.range)
+}
+
+@Test func rewriteWithAnEditAboveDoesNotJumpToTheOtherCopy() throws {
+    let source = "# Plan\n\nShip it.\n\nWait.\n\nShip it.\n"
+    let second = try comment(on: "Ship it", in: source, occurrence: 1)
+    let edited = "# Plan\n\nContext.\n\nShip it.\n\nWait.\n\nHold it.\n"
+    #expect(second.reanchored(from: render(source), to: render(edited)).isOutdated)
+}
+
+@Test func reopeningAnUnchangedFileKeepsACommentWhoseSelectionIncludedWhitespace() throws {
+    let source = "Ship it.\n\nShip it.\n"
+    let text = render(source)
+    let second = (text.string as NSString).range(of: "Ship it.", options: .backwards)
+    let selection = NSRange(location: second.location - 1, length: second.length + 1)
+    let lines = try #require(MarkdownRenderer.lineRange(of: selection, in: text))
+    let quote = try #require(MarkdownRenderer.quote(of: selection, in: text))
+    let original = ReviewComment(lines: lines, quote: quote, range: selection)
+    #expect(original.reanchored(in: text) == original)
 }
 
 @Test func reopenWithDuplicatedQuoteKeepsAnUnmovedCommentAndOutdatesAMovedOne() throws {
