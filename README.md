@@ -86,6 +86,8 @@ On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Home
 
 Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 
+CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every pull request and every push to `main`.
+
 `make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
 
 [AGENTS.md](AGENTS.md) has the house rules for contributors, human or agent.
@@ -105,6 +107,7 @@ Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle set
 - `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewExportTests.swift`).
 - `App/`: the app's asset catalog (icon). `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
+- `.github/workflows/ci.yml`: the `check` job, which runs `make check` on GitHub Actions.
 - `scripts/docs-check.sh`: the README freshness check behind `make docs-check`.
 
 ## License
