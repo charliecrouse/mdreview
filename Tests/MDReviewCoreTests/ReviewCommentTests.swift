@@ -56,3 +56,11 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     let moved = reanchor(original, to: "# Plan\n\nShip **the importer**.\n")
     #expect(!moved.isOutdated && moved.lines == 3...3)
 }
+
+@Test func commentSavedWithoutAnOutdatedFlagStillDecodes() throws {
+    let saved =
+        #"{"text":"When?","range":[6,8],"id":"178F91EC-977E-4D33-90FC-F3D9DA236313","lines":[3,3],"quote":"Ship it."}"#
+    let decoded = try JSONDecoder().decode(ReviewComment.self, from: Data(saved.utf8))
+    #expect(decoded.lines == 3...3 && decoded.quote == "Ship it." && decoded.range == NSRange(location: 6, length: 8))
+    #expect(!decoded.isOutdated)
+}
