@@ -66,7 +66,7 @@ For a standalone app, run `make bootstrap` once, then `make app`. It builds an a
 - A saved record that can't be read is moved aside as `<hash>.unreadable-<time>.json` in `Comments/`, and the file opens with no comments.
 - Records for files you delete stay in `~/Library/Application Support/mdreview/` until you remove them.
 - One file at a time, and the Markdown is read-only.
-- A comment follows its quoted text as rendered. When that text appears more than once, it moves to the occurrence nearest its old position. Any change inside the quote marks it outdated, and its line numbers stay those of the earlier version.
+- A comment follows its quoted text as rendered. While the file is open, it shifts with edits around it and is marked outdated when an edit touches its quote and the quote isn't in the edited text, even if a copy exists elsewhere. On reopen, a comment whose quote moved follows it only when the quote occurs exactly once; otherwise it is marked outdated. An outdated comment keeps the line numbers of the earlier version.
 - Send to Agent is clipboard plus file; there are no direct agent integrations.
 - Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
 - Inline formatting that spans a soft line break (`**bold` on one line, `text**` on the next) renders literally. The renderer works line by line so every selection maps to exact source lines.

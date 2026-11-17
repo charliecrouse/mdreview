@@ -57,9 +57,10 @@ final class ReviewModel {
         isMissing = false
         guard source != self.source else { return }
         self.source = source
+        let previous = rendered.text
         rendered = MarkdownRenderer.render(source)
         selection = NSRange(location: 0, length: 0)
-        comments = comments.map { $0.reanchored(in: rendered.text) }
+        comments = comments.map { $0.reanchored(from: previous, to: rendered.text) }
         sortComments()
     }
 

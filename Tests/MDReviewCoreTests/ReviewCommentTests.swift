@@ -15,6 +15,8 @@ private func comment(on quote: String, in source: String, occurrence: Int = 0) t
     return ReviewComment(lines: lines, quote: quote, text: "Note", range: range)
 }
 
+private func render(_ source: String) -> NSAttributedString { MarkdownRenderer.render(source).text }
+
 private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComment {
     comment.reanchored(in: MarkdownRenderer.render(source).text)
 }
@@ -33,13 +35,38 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     #expect(moved.text == "Note" && moved.id == original.id)
 }
 
-@Test func duplicatedTextPicksTheOccurrenceNearestTheOldPosition() throws {
+@Test func liveEditAboveDuplicatedTextKeepsTheCommentOnItsOccurrence() throws {
+    let source = "Ship it.\n\nShip it.\n"
+    let second = try comment(on: "Ship it", in: source, occurrence: 1)
+    #expect(second.lines == 3...3)
+    let edited = "Twenty chars of intr\n\n" + source
+    let moved = second.reanchored(from: render(source), to: render(edited))
+    #expect(!moved.isOutdated && moved.lines == 5...5)
+    let first = try comment(on: "Ship it", in: source)
+    #expect(first.reanchored(from: render(source), to: render(edited)).lines == 3...3)
+}
+
+@Test func liveRewriteOfDuplicatedTextMarksOutdatedInsteadOfJumping() throws {
     let source = "Ship it.\n\nWait.\n\nShip it.\n"
     let second = try comment(on: "Ship it", in: source, occurrence: 1)
-    #expect(second.lines == 5...5)
-    #expect(reanchor(second, to: "Intro.\n\n" + source).lines == 7...7)
-    let first = try comment(on: "Ship it", in: source)
-    #expect(reanchor(first, to: "Intro.\n\n" + source).lines == 3...3)
+    let rewritten = second.reanchored(from: render(source), to: render("Ship it.\n\nWait.\n\nHold it.\n"))
+    #expect(rewritten.isOutdated && rewritten.lines == 5...5)
+}
+
+@Test func reopenWithDuplicatedQuoteKeepsAnUnmovedCommentAndOutdatesAMovedOne() throws {
+    let source = "Ship it.\n\nShip it.\n"
+    let second = try comment(on: "Ship it", in: source, occurrence: 1)
+    #expect(reanchor(second, to: source) == second)
+    #expect(reanchor(second, to: "Intro.\n\n" + source).isOutdated)
+}
+
+@Test func outdatedCommentIsNotRestoredOntoAnAmbiguousMatch() throws {
+    let source = "Ship it.\n\nWait.\n"
+    let original = try comment(on: "Wait", in: source)
+    let outdated = original.reanchored(from: render(source), to: render("Ship it.\n\nGo.\n"))
+    #expect(outdated.isOutdated)
+    let ambiguous = outdated.reanchored(from: render("Ship it.\n\nGo.\n"), to: render("Wait.\n\nWait.\n"))
+    #expect(ambiguous.isOutdated)
 }
 
 @Test func deletedTextMarksTheCommentOutdatedAndKeepsItsOldAnchor() throws {
