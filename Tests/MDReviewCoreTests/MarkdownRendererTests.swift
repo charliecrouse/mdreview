@@ -64,3 +64,13 @@ private let source = """
         MarkdownRenderer.lineRange(of: text.range(of: "Open"), in: table.text) == 3...3, "row keeps its source line")
     #expect(MarkdownRenderer.lineRange(of: text.range(of: "After"), in: table.text) == 5...5)
 }
+
+@Test func quotesAndRulesKeepContentAndSourceLines() {
+    let rendered = MarkdownRenderer.render("> quoted *text*\n\n---\n\nAfter.")
+    let text = rendered.text.string as NSString
+    #expect(text.contains("▍ quoted text") && !text.contains(">") && !text.contains("*"))
+    #expect(text.contains("· · ·") && !text.contains("---"), "rule rendered as a centered divider")
+    #expect(MarkdownRenderer.lineRange(of: text.range(of: "quoted"), in: rendered.text) == 1...1)
+    #expect(MarkdownRenderer.lineRange(of: text.range(of: "· · ·"), in: rendered.text) == 3...3)
+    #expect(MarkdownRenderer.lineRange(of: text.range(of: "After"), in: rendered.text) == 5...5)
+}
