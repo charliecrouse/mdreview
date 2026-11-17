@@ -1,7 +1,7 @@
 SRC := Sources Tests UITests Package.swift
 XCODE := xcodebuild -project mdreview.xcodeproj -scheme mdreview -derivedDataPath build/DerivedData
 
-.PHONY: build run test lint format deadcode check hooks project app uitest
+.PHONY: build run test lint format deadcode docs-check check hooks project app uitest
 
 build:
 	swift build
@@ -25,7 +25,10 @@ format:
 deadcode:
 	periphery scan --strict --quiet
 
-check: lint test deadcode
+docs-check:
+	scripts/docs-check.sh
+
+check: lint test deadcode docs-check
 
 hooks:
 	git config core.hooksPath .githooks

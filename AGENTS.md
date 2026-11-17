@@ -4,7 +4,7 @@ A native macOS app for reviewing Markdown and handing the review to a coding age
 
 ## Commands
 
-- `make check` must pass before every commit. It runs swift-format and SwiftLint (`--strict`), the unit tests and Periphery.
+- `make check` must pass before every commit. It runs swift-format and SwiftLint (`--strict`), the unit tests, Periphery and the README freshness check.
 - `make format` fixes layout. Run it before fixing lint by hand.
 - `make uitest` runs when UI behavior changes.
 - `make hooks` once per clone, so commits run `make lint`.
@@ -35,4 +35,4 @@ A native macOS app for reviewing Markdown and handing the review to a coding age
 
 ## Docs
 
-Any change to `make` targets, folders or user-visible behavior updates the README in the same commit.
+Any change to `make` targets, folders or user-visible behavior updates the README in the same commit. `make docs-check` catches the mechanical part.

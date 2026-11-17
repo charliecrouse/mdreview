@@ -37,7 +37,8 @@ Plain `make`. `swift format` ships with the Swift 6.2 toolchain; `make lint` als
 | `make lint` | `swift format lint --strict`, then `swiftlint lint --strict` (rules in `.swiftlint.yml`); fails on violations |
 | `make format` | Rewrite sources with `swift format` |
 | `make deadcode` | `periphery scan --strict`: fails on unused code (config in `.periphery.yml`) |
-| `make check` | `lint`, `test`, then `deadcode` |
+| `make docs-check` | Fails when this README's `make` table or Layout section disagrees with the Makefile or the tree |
+| `make check` | `lint`, `test`, `deadcode`, then `docs-check` |
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
@@ -94,6 +95,7 @@ What's the rollback?
 - `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewExportTests.swift`).
 - `App/`: the app's asset catalog (icon). `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
+- `scripts/docs-check.sh`: the README freshness check behind `make docs-check`.
 
 ## Not yet
 
