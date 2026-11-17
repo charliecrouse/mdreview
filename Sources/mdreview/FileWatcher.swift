@@ -21,7 +21,14 @@ final class FileWatcher {
         source?.cancel()
         source = nil
         var descriptor = open(url.path, O_EVTONLY)
-        if descriptor < 0 { descriptor = open(url.deletingLastPathComponent().path, O_EVTONLY) }
+        if descriptor < 0 {
+            descriptor = open(url.deletingLastPathComponent().path, O_EVTONLY)
+            let file = open(url.path, O_EVTONLY)
+            if file >= 0 {
+                if descriptor >= 0 { close(descriptor) }
+                descriptor = file
+            }
+        }
         guard descriptor >= 0 else { return }
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor, eventMask: [.write, .extend, .delete, .rename, .revoke], queue: .main)

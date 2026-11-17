@@ -74,3 +74,13 @@ private let source = """
     #expect(MarkdownRenderer.lineRange(of: text.range(of: "· · ·"), in: rendered.text) == 3...3)
     #expect(MarkdownRenderer.lineRange(of: text.range(of: "After"), in: rendered.text) == 5...5)
 }
+
+@Test func quoteIsTrimmedAndRefusesWhitespaceOnlySelections() {
+    let rendered = MarkdownRenderer.render("First.\n\nSecond.")
+    let text = rendered.text.string as NSString
+    let gap = NSRange(location: NSMaxRange(text.range(of: "First.")), length: 1)
+    #expect(MarkdownRenderer.quote(of: gap, in: rendered.text) == nil)
+    let padded = NSRange(location: 0, length: text.range(of: "Second.").location)
+    #expect(MarkdownRenderer.quote(of: padded, in: rendered.text) == "First.")
+    #expect(MarkdownRenderer.quote(of: NSRange(location: 0, length: text.length + 1), in: rendered.text) == nil)
+}

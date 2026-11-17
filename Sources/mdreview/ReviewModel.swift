@@ -18,7 +18,10 @@ final class ReviewModel {
     @ObservationIgnored private var source = ""
     @ObservationIgnored private var watcher: FileWatcher?
 
-    var canComment: Bool { MarkdownRenderer.lineRange(of: selection, in: rendered.text) != nil }
+    var canComment: Bool {
+        MarkdownRenderer.lineRange(of: selection, in: rendered.text) != nil
+            && MarkdownRenderer.quote(of: selection, in: rendered.text) != nil
+    }
 
     func open(_ url: URL) {
         do {
@@ -60,9 +63,9 @@ final class ReviewModel {
     }
 
     func addComment() {
-        guard let lines = MarkdownRenderer.lineRange(of: selection, in: rendered.text) else { return }
-        let quote = rendered.text.attributedSubstring(from: selection).string
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let lines = MarkdownRenderer.lineRange(of: selection, in: rendered.text),
+            let quote = MarkdownRenderer.quote(of: selection, in: rendered.text)
+        else { return }
         let comment = ReviewComment(lines: lines, quote: quote, range: selection)
         comments.append(comment)
         sortComments()
