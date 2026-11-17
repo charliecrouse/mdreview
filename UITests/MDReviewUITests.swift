@@ -1,15 +1,16 @@
 import XCTest
 
 final class MDReviewUITests: XCTestCase {
-    @MainActor func testToggleSidebarsCommentAndSend() throws {
+    @MainActor func testToggleSidebarsCommentSendAndReopen() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let file = dir.appendingPathComponent("fixture.md")
         try "Ship the importer behind a feature flag.\n".write(to: file, atomically: true, encoding: .utf8)
-        let review = dir.appendingPathComponent("fixture.review.md")
+        let store = dir.appendingPathComponent("store")
+        let reviews = store.appendingPathComponent("Reviews")
 
         let app = XCUIApplication()
-        app.launchArguments = [file.path]
+        app.launchArguments = ["-StoreDirectory", store.path, file.path]
         app.launch()
         let window = app.windows.firstMatch
 
@@ -44,11 +45,23 @@ final class MDReviewUITests: XCTestCase {
         send.click()
 
         let deadline = Date().addingTimeInterval(5)
-        while !FileManager.default.fileExists(atPath: review.path) && Date() < deadline {
+        var names: [String] = []
+        while names.isEmpty && Date() < deadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            names = (try? FileManager.default.contentsOfDirectory(atPath: reviews.path)) ?? []
         }
-        let saved = try String(contentsOf: review, encoding: .utf8)
+        let name = try XCTUnwrap(names.first)
+        XCTAssertTrue(name.hasPrefix("fixture-") && name.hasSuffix(".review.md"), name)
+        let saved = try String(contentsOf: reviews.appendingPathComponent(name), encoding: .utf8)
         XCTAssertTrue(saved.contains("## 1. fixture.md:1"), saved)
         XCTAssertTrue(saved.contains("Name the flag."), saved)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: dir.path).sorted(), ["fixture.md", "store"])
+
+        // The comment comes back when the file is reopened.
+        app.terminate()
+        app.launch()
+        let reloaded = app.windows.firstMatch.descendants(matching: .any)["commentField"].firstMatch
+        XCTAssertTrue(reloaded.waitForExistence(timeout: 10))
+        XCTAssertEqual(reloaded.value as? String, "Name the flag.")
     }
 }

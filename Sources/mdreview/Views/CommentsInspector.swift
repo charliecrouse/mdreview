@@ -32,6 +32,7 @@ struct CommentsInspector: View {
                 Text(status)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .textSelection(.enabled)  // so the saved review's path can be copied
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
