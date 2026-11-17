@@ -81,7 +81,11 @@ What's the rollback?
 - `Sources/MDReviewCore/`
   - `Markdown.swift`: a line-oriented Markdown renderer. It tags every rendered character with the source line it came from.
   - `Review.swift`: the comment model and the review export.
-- `Sources/mdreview/MDReviewApp.swift`: the SwiftUI app. It has a split view with a glass sidebar (outline and comments), an opaque `NSTextView` reader, and a comment inspector.
+- `Sources/mdreview/`: the SwiftUI app.
+  - `MDReviewApp.swift`, `AppDelegate.swift`: the scene, menu commands and command-line file argument.
+  - `ReviewModel.swift`: the open file, its comments and Send to Agent.
+  - `Views/`: the split view with a glass sidebar (outline and comments) and the comment inspector.
+  - `Reader/`: AppKit bridges: the `NSTextView` reader and the behind-window glass.
 - `Tests/MDReviewCoreTests/`: unit tests for the renderer and the review export.
 - `App/`: the app's asset catalog (icon). `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
