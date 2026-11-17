@@ -1,6 +1,7 @@
-SRC := Sources Package.swift
+SRC := Sources Tests UITests Package.swift
+XCODE := xcodebuild -project mdreview.xcodeproj -scheme mdreview -derivedDataPath build/DerivedData
 
-.PHONY: build run test lint format check hooks
+.PHONY: build run test lint format check hooks project app uitest
 
 build:
 	swift build
@@ -9,9 +10,8 @@ build:
 run:
 	swift run mdreview $(FILE)
 
-# Swift Testing/XCTest need Xcode; the Command Line Tools run this self-check instead.
 test:
-	swift run mdreview-check
+	swift test
 
 lint:
 	swift format lint --strict -r $(SRC)
@@ -23,3 +23,16 @@ check: lint test
 
 hooks:
 	git config core.hooksPath .githooks
+
+# Needs XcodeGen: brew install xcodegen
+project:
+	xcodegen generate
+
+app: project
+	$(XCODE) -configuration Release build
+	rm -rf build/mdreview.app
+	ditto build/DerivedData/Build/Products/Release/mdreview.app build/mdreview.app
+
+# Needs macOS Automation Mode (`automationmodetool enable-automationmode-without-authentication`, once).
+uitest: project
+	$(XCODE) test

@@ -152,6 +152,7 @@ struct ContentView: View {
         NavigationSplitView {
             Sidebar(model: model)
                 .navigationSplitViewColumnWidth(min: 180, ideal: 230, max: 340)
+                .accessibilityIdentifier("sidebar")
         } detail: {
             Group {
                 if model.fileURL == nil {
@@ -189,6 +190,7 @@ struct ContentView: View {
             .inspector(isPresented: $showInspector) {
                 CommentsInspector(model: model)
                     .inspectorColumnWidth(min: 250, ideal: 300, max: 420)
+                    .accessibilityIdentifier("inspector")
             }
         }
         .background(BehindWindowGlass().ignoresSafeArea())  // the whole window is glass
@@ -212,11 +214,13 @@ struct ContentView: View {
                 }
                 .buttonStyle(.glassProminent)
                 .disabled(model.comments.isEmpty)
+                .accessibilityIdentifier("sendToAgent")
                 .help("Copy the review to the clipboard and save it beside the file (⌘↩)")
             }
             ToolbarSpacer(.fixed)
             ToolbarItem {
                 Button("Comments", systemImage: "sidebar.right") { showInspector.toggle() }
+                    .accessibilityIdentifier("toggleInspector")
             }
         }
         .alert(
@@ -348,6 +352,7 @@ struct CommentCard: View {
                 .textFieldStyle(.plain)
                 .lineLimit(1...10)
                 .focused(focusedField, equals: comment.id)
+                .accessibilityIdentifier("commentField")
         }
         .padding(10)
         .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 10))
@@ -401,6 +406,7 @@ struct ReaderView: NSViewRepresentable {
         textView.textContainer?.widthTracksTextView = true
         textView.usesFindBar = true
         textView.delegate = context.coordinator
+        textView.setAccessibilityIdentifier("reader")
         textView.unregisterDraggedTypes()  // let file drops reach the SwiftUI drop target
 
         let scrollView = NSScrollView()

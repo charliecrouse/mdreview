@@ -9,7 +9,8 @@ The whole window is glass. A behind-window material lets the desktop show throug
 ## Requirements
 
 - macOS 26 (Tahoe) or later
-- Swift 6.2: Xcode 26, or just the Command Line Tools (`xcode-select --install`)
+- Xcode 26 (Swift 6.2). `swift test` and the `.app` need full Xcode; the Command Line Tools alone can build and run
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) for the `.app`: `brew install xcodegen`
 
 ## Build and run
 
@@ -20,23 +21,28 @@ swift run mdreview path/to/file.md
 
 You can also run it without a file, then use **File → Open…** (⌘O) or drag a `.md` file onto the window. Try it on this README with `swift run mdreview README.md`.
 
-Run the core self-check with `make test` (or `swift run mdreview-check`). It checks rendered-to-source line mapping and the review export. It is a small executable rather than `swift test`, because `swift test` doesn't build with just the Command Line Tools (`import Testing` fails with "no such module 'Testing'").
+`make app` builds a signed (ad-hoc) Release `build/mdreview.app` with its icon.
 
 ## Development
 
-Plain `make`, no extra tools. `swift format` ships with the Swift 6.2 toolchain.
+Plain `make`. `swift format` ships with the Swift 6.2 toolchain; the Xcode targets also need XcodeGen.
 
 | Target | What it does |
 |---|---|
 | `make build` | `swift build` |
 | `make run FILE=README.md` | Build and open a file (`FILE` is optional) |
-| `make test` | Run the `mdreview-check` self-check |
+| `make test` | `swift test`: the `MDReviewCoreTests` unit tests (Swift Testing) |
 | `make lint` | `swift format lint --strict`; fails on violations |
 | `make format` | Rewrite sources with `swift format` |
 | `make check` | `lint` then `test` |
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
+| `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
+| `make app` | Release build into `build/mdreview.app` |
+| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent |
 
-Style lives in `.swift-format` and `.editorconfig`.
+Style lives in `.swift-format` and `.editorconfig`. The app's bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
+
+`make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
 
 ## Using it
 
@@ -76,7 +82,9 @@ What's the rollback?
   - `Markdown.swift`: a line-oriented Markdown renderer. It tags every rendered character with the source line it came from.
   - `Review.swift`: the comment model and the review export.
 - `Sources/mdreview/MDReviewApp.swift`: the SwiftUI app. It has a split view with a glass sidebar (outline and comments), an opaque `NSTextView` reader, and a comment inspector.
-- `Sources/mdreview-check/`: the self-check.
+- `Tests/MDReviewCoreTests/`: unit tests for the renderer and the review export.
+- `App/`: the app's asset catalog (icon). `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
+- `UITests/`: the end-to-end UI test.
 
 ## Not yet
 
@@ -85,4 +93,4 @@ What's the rollback?
 - No direct agent integrations; Send to Agent is clipboard plus file only.
 - Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
 - Inline formatting that spans a soft line break (for example `**bold` on one line and `text**` on the next) renders literally. The renderer works line by line so that every selection maps to exact source lines.
-- It runs as a bare executable (`swift run`). There's no `.app` bundle or icon yet.
+- The `.app` is ad-hoc signed for local use only: no Developer ID, notarization or DMG.

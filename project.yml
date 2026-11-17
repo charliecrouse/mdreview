@@ -1,0 +1,60 @@
+# XcodeGen spec for the .app; `make project` generates mdreview.xcodeproj (gitignored).
+name: mdreview
+options:
+  bundleIdPrefix: com.charliecrouse
+  deploymentTarget:
+    macOS: "26.0" # keep in step with Package.swift
+packages:
+  mdreview:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_IDENTITY: "-" # ad-hoc; no Developer ID
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+targets:
+  # Not "mdreview": that name is the package's executable and confuses the UI test's target lookup.
+  MDReviewApp:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/mdreview
+      - App
+    dependencies:
+      - package: mdreview
+        product: MDReviewCore
+    settings:
+      base:
+        PRODUCT_NAME: mdreview
+        PRODUCT_BUNDLE_IDENTIFIER: com.charliecrouse.mdreview
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: mdreview
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  mdreviewUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - UITests
+    dependencies:
+      - target: MDReviewApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.charliecrouse.mdreview.uitests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  mdreview:
+    build:
+      targets:
+        MDReviewApp: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - mdreviewUITests
+    archive:
+      config: Release
