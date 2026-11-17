@@ -74,7 +74,7 @@ struct ContentView: View {
                 .buttonStyle(.glassProminent)
                 .disabled(model.comments.isEmpty)
                 .accessibilityIdentifier("sendToAgent")
-                .help("Copy the review to the clipboard and save it beside the file (⌘↩)")
+                .help("Copy the review to the clipboard and save it in mdreview's storage (⌘↩)")
             }
             ToolbarSpacer(.fixed)
             ToolbarItem {

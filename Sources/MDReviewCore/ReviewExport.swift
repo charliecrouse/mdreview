@@ -20,9 +20,4 @@ public enum ReviewExport {
         }
         return out
     }
-
-    /// `notes/plan.md` -> `notes/plan.review.md`
-    public static func reviewURL(for file: URL) -> URL {
-        file.deletingPathExtension().appendingPathExtension("review.md")
-    }
 }

@@ -13,5 +13,4 @@ import Testing
     #expect(review.contains("File: `/tmp/notes/plan.md`"))
     #expect(review.contains("## 1. plan.md:3-4\n\n> feature flag\n> and enable\n\nName the flag.\n"))
     #expect(review.contains("## 2. plan.md:9\n\n> Backfill\n\nWhich workspaces?\n"))
-    #expect(ReviewExport.reviewURL(for: file).path == "/tmp/notes/plan.review.md")
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ReviewComment: Identifiable, Hashable, Sendable {
+public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     public let id: UUID
     /// Inclusive 1-based source lines the comment is anchored to.
     public var lines: ClosedRange<Int>

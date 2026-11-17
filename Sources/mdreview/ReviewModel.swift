@@ -1,5 +1,6 @@
 import AppKit
 import MDReviewCore
+import OSLog
 import Observation
 import UniformTypeIdentifiers
 
@@ -7,12 +8,17 @@ import UniformTypeIdentifiers
 final class ReviewModel {
     var fileURL: URL?
     var rendered = RenderedMarkdown()
-    var comments: [ReviewComment] = []
+    var comments: [ReviewComment] = [] { didSet { saveComments() } }
     var selection = NSRange(location: 0, length: 0)
     var focusedComment: ReviewComment.ID?
     var scrollTarget: NSRange?
     var status: String?
     var error: String?
+
+    @ObservationIgnored private let store = ReviewModel.makeStore()
+    /// Off while the open file's saved record couldn't be read or moved aside, so saving can't overwrite it.
+    @ObservationIgnored private var savesComments = false
+    private nonisolated static let log = Logger(subsystem: "com.charliecrouse.mdreview", category: "store")
 
     var canComment: Bool { MarkdownRenderer.lineRange(of: selection, in: rendered.text) != nil }
 
@@ -21,10 +27,10 @@ final class ReviewModel {
             let source = try String(contentsOf: url, encoding: .utf8)
             fileURL = url
             rendered = MarkdownRenderer.render(source)
-            comments = []
+            status = nil
+            comments = loadComments(for: url)
             selection = NSRange(location: 0, length: 0)
             focusedComment = nil
-            status = nil
         } catch {
             self.error = "Couldn't open \(url.lastPathComponent): \(error.localizedDescription)"
         }
@@ -62,19 +68,61 @@ final class ReviewModel {
         }
     }
 
-    /// Copies the batched review to the clipboard and saves it beside the file.
+    /// Copies the batched review to the clipboard and saves it in the app's storage.
     func send() {
         guard let url = fileURL, !comments.isEmpty else { return }
         let review = ReviewExport.markdown(file: url, comments: comments)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(review, forType: .string)
-        let out = ReviewExport.reviewURL(for: url)
+        let copied = "Copied \(comments.count) comment\(comments.count == 1 ? "" : "s")"
+        guard let store else {
+            status = copied
+            return
+        }
         do {
-            try review.write(to: out, atomically: true, encoding: .utf8)
-            status =
-                "Copied \(comments.count) comment\(comments.count == 1 ? "" : "s") · saved \(out.lastPathComponent)"
+            let out = try store.saveReview(review, for: url)
+            status = "\(copied) · saved \((out.path as NSString).abbreviatingWithTildeInPath)"
         } catch {
-            status = "Copied to clipboard, but couldn't save \(out.lastPathComponent): \(error.localizedDescription)"
+            status = "\(copied), but couldn't save the review: \(error.localizedDescription)"
+        }
+    }
+
+    private func loadComments(for url: URL) -> [ReviewComment] {
+        savesComments = store != nil
+        do {
+            return try store?.load(for: url) ?? []
+        } catch {
+            savesComments = error.preservedAt != nil
+            let kept = error.preservedAt.map { ($0.path as NSString).abbreviatingWithTildeInPath }
+            let note = "\(url.path), kept at \(kept ?? "its place"): \(error.underlying)"
+            Self.log.error("Unreadable comments for \(note, privacy: .public)")
+            status =
+                kept.map { "Couldn't read the saved comments; kept them at \($0)" }
+                ?? "Couldn't read the saved comments; new comments won't be saved"
+            return []
+        }
+    }
+
+    private func saveComments() {
+        guard savesComments, let store, let url = fileURL else { return }
+        do {
+            try store.save(comments, for: url)
+        } catch {
+            Self.log.error("Couldn't save comments for \(url.path, privacy: .public): \(error)")
+            status = "Couldn't save comments: \(error.localizedDescription)"
+        }
+    }
+
+    private nonisolated static func makeStore() -> ReviewStore? {
+        // The UI test passes `-StoreDirectory <dir>` so it stays out of the user's Application Support.
+        if let dir = UserDefaults.standard.string(forKey: "StoreDirectory") {
+            return ReviewStore(directory: URL(fileURLWithPath: dir, isDirectory: true))
+        }
+        do {
+            return try ReviewStore.standard()
+        } catch {
+            log.error("No Application Support folder; comments won't be saved: \(error)")
+            return nil
         }
     }
 }
