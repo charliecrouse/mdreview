@@ -53,6 +53,13 @@ public enum MarkdownRenderer {
         return lower <= upper ? lower...upper : nil
     }
 
+    /// The trimmed rendered text of `range`, or nil when it is only whitespace and so can't be re-found.
+    public static func quote(of range: NSRange, in text: NSAttributedString) -> String? {
+        guard NSMaxRange(range) <= text.length else { return nil }
+        let quote = text.attributedSubstring(from: range).string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return quote.isEmpty ? nil : quote
+    }
+
     /// Rendered range of the first characters produced by `line`.
     public static func range(ofLine line: Int, in text: NSAttributedString) -> NSRange? {
         var found: NSRange?

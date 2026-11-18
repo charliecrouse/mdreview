@@ -17,6 +17,18 @@ struct CommentCard: View {
                 Text("Line\(comment.lines.count == 1 ? "" : "s") \(comment.lineLabel)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
+                if comment.isOutdated {
+                    Text("Outdated")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(.orange.opacity(0.15), in: .capsule)
+                        .help(
+                            "The quoted text was rewritten or removed, so the line numbers are from an earlier version"
+                        )
+                        .accessibilityIdentifier("outdated")
+                }
                 Spacer()
                 Button(role: .destructive, action: onDelete) {
                     Label("Delete comment", systemImage: "trash").labelStyle(.iconOnly)
@@ -29,7 +41,10 @@ struct CommentCard: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(3)
                 .padding(.leading, 8)
-                .overlay(alignment: .leading) { Rectangle().fill(.tint).frame(width: 2) }
+                .strikethrough(comment.isOutdated)
+                .overlay(alignment: .leading) {
+                    Rectangle().fill(comment.isOutdated ? AnyShapeStyle(.orange) : AnyShapeStyle(.tint)).frame(width: 2)
+                }
             TextField("Add a comment…", text: $comment.text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...10)
