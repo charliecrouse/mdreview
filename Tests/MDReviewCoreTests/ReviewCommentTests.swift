@@ -11,8 +11,9 @@ private func comment(on quote: String, in source: String, occurrence: Int = 0) t
         range = (text.string as NSString).range(
             of: quote, range: NSRange(location: rest, length: text.length - rest))
     }
-    let lines = try #require(MarkdownRenderer.lineRange(of: range, in: text))
-    return ReviewComment(lines: lines, quote: quote, text: "Note", range: range)
+    var comment = try #require(ReviewComment(selection: range, in: text))
+    comment.text = "Note"
+    return comment
 }
 
 private func render(_ source: String) -> NSAttributedString { MarkdownRenderer.render(source).text }
@@ -53,11 +54,51 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     #expect(rewritten.isOutdated && rewritten.lines == 5...5)
 }
 
-@Test func editsAboveAndBelowInOneWriteOutdateADuplicatedQuoteBetweenThem() throws {
+@Test func editsAboveAndBelowInOneWriteKeepADuplicatedQuoteBetweenThem() throws {
     let source = "Title\n\nShip it.\n\nShip it.\n\nEnd\n"
     let second = try comment(on: "Ship it", in: source, occurrence: 1)
     let moved = second.reanchored(from: render(source), to: render("Title!\n\nShip it.\n\nShip it.\n\nEnd!\n"))
-    #expect(moved.isOutdated && moved.range == second.range)
+    #expect(!moved.isOutdated && moved.lines == 5...5)
+}
+
+@Test func farApartEditsInOneWriteCarryTheCommentBetweenThem() throws {
+    let source = "# Plan\n\nIntro.\n\nShip the importer.\n\nEnd.\n"
+    let original = try comment(on: "the importer", in: source)
+    let edited = "# Plan\n\nNew intro.\n\nMore.\n\nShip the importer.\n\nDone.\n"
+    let moved = original.reanchored(from: render(source), to: render(edited))
+    #expect(!moved.isOutdated && moved.lines == 7...7)
+    #expect(moved.text == "Note" && moved.id == original.id)
+}
+
+private let repeated = "Please ship it today, and then after that ship it again once every reviewer signs off."
+
+@Test func editToARepeatedQuotesLineFollowsTheCopyWithTheSameContext() throws {
+    let second = try comment(on: "ship it", in: repeated, occurrence: 1)
+    let edited = repeated + " Then celebrate."
+    let moved = second.reanchored(from: render(repeated), to: render(edited))
+    #expect(!moved.isOutdated && moved.range == second.range)
+    let first = try comment(on: "ship it", in: repeated)
+    #expect(first.reanchored(from: render(repeated), to: render(edited)).range == first.range)
+}
+
+@Test func rewritingTheCommentedCopyOfARepeatedQuoteDoesNotJumpToTheOtherCopy() throws {
+    let second = try comment(on: "ship it", in: repeated, occurrence: 1)
+    let edited = "Please ship it today, and then after that deploy again once every reviewer signs off."
+    #expect(second.reanchored(from: render(repeated), to: render(edited)).isOutdated)
+}
+
+@Test func reopenAfterTheCommentedCopyOfARepeatedQuoteIsRewrittenMarksItOutdated() throws {
+    let second = try comment(on: "ship it", in: repeated, occurrence: 1)
+    let edited = "Please ship it today, and then after that deploy again once every reviewer signs off."
+    #expect(reanchor(second, to: edited).isOutdated)
+}
+
+@Test func reopenFollowsTheCopyOfARepeatedQuoteWithTheSameContext() throws {
+    let second = try comment(on: "ship it", in: repeated, occurrence: 1)
+    let moved = reanchor(second, to: "# Plan\n\nIntro.\n\n" + repeated)
+    #expect(!moved.isOutdated && moved.lines == 5...5)
+    #expect(MarkdownRenderer.quote(of: moved.range, in: render("# Plan\n\nIntro.\n\n" + repeated)) == "ship it")
+    #expect(moved.range.location == second.range.location + render("# Plan\n\nIntro.\n\n").length)
 }
 
 @Test func rewriteWithAnEditAboveDoesNotJumpToTheOtherCopy() throws {
@@ -72,9 +113,7 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     let text = render(source)
     let second = (text.string as NSString).range(of: "Ship it.", options: .backwards)
     let selection = NSRange(location: second.location - 1, length: second.length + 1)
-    let lines = try #require(MarkdownRenderer.lineRange(of: selection, in: text))
-    let quote = try #require(MarkdownRenderer.quote(of: selection, in: text))
-    let original = ReviewComment(lines: lines, quote: quote, range: selection)
+    let original = try #require(ReviewComment(selection: selection, in: text))
     #expect(original.reanchored(in: text) == original)
 }
 
@@ -139,5 +178,5 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
         #"{"text":"When?","range":[6,8],"id":"178F91EC-977E-4D33-90FC-F3D9DA236313","lines":[3,3],"quote":"Ship it."}"#
     let decoded = try JSONDecoder().decode(ReviewComment.self, from: Data(saved.utf8))
     #expect(decoded.lines == 3...3 && decoded.quote == "Ship it." && decoded.range == NSRange(location: 6, length: 8))
-    #expect(!decoded.isOutdated)
+    #expect(!decoded.isOutdated && decoded.prefix.isEmpty && decoded.suffix.isEmpty)
 }

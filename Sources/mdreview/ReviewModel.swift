@@ -73,7 +73,7 @@ final class ReviewModel {
         let previous = rendered.text
         rendered = MarkdownRenderer.render(source)
         selection = NSRange(location: 0, length: 0)
-        comments = comments.map { $0.reanchored(from: previous, to: rendered.text) }
+        comments = comments.reanchored(from: previous, to: rendered.text)
         sortComments()
     }
 
@@ -84,10 +84,7 @@ final class ReviewModel {
     }
 
     func addComment() {
-        guard let lines = MarkdownRenderer.lineRange(of: selection, in: rendered.text),
-            let quote = MarkdownRenderer.quote(of: selection, in: rendered.text)
-        else { return }
-        let comment = ReviewComment(lines: lines, quote: quote, range: selection)
+        guard let comment = ReviewComment(selection: selection, in: rendered.text) else { return }
         comments.append(comment)
         sortComments()
         focusedComment = comment.id
