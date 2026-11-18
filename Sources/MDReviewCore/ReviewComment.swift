@@ -9,7 +9,8 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     public var text: String
     /// Rendered character range, used to highlight the anchor while the file is open.
     public var range: NSRange
-    /// The quoted text is no longer in the file, so `lines` and `range` point at an earlier version.
+    /// The quoted text was rewritten, removed or can't be told apart from another copy,
+    /// so `lines` and `range` point at an earlier version.
     public var isOutdated = false
 
     private enum CodingKeys: String, CodingKey { case id, lines, quote, text, range, isOutdated }
