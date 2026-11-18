@@ -43,7 +43,8 @@ extension ReviewComment {
             (above.flatMap { kept[$0] }.map { $0 + 1 } ?? 0)..<(below.flatMap { kept[$0] } ?? newLines.count),
             of: newLines)
         let before = candidates(in: oldString, within: oldHunk)
-        let after = candidates(in: newString, within: newHunk)
+        let wasRepeated = Self.occurrences(of: quote, in: oldString, within: oldHunk).count > 1
+        let after = candidates(in: newString, within: newHunk, comparingContext: wasRepeated)
         return before.count == 1 && after.count == 1 ? anchored(at: after[0], in: new) : outdated()
     }
 
@@ -62,10 +63,13 @@ extension ReviewComment {
         )
     }
 
-    /// The copies of the quote in `window`, narrowed to those with the saved surrounding text when there are several.
-    private func candidates(in string: NSString, within window: NSRange) -> [NSRange] {
+    /// The copies of the quote in `window`, narrowed to those with the saved surrounding text when there are several
+    /// or when `comparingContext` asks for it even for a lone copy.
+    private func candidates(
+        in string: NSString, within window: NSRange, comparingContext: Bool = false
+    ) -> [NSRange] {
         let matches = Self.occurrences(of: quote, in: string, within: window)
-        guard matches.count > 1 else { return matches }
+        guard comparingContext || matches.count > 1 else { return matches }
         return matches.filter { match in
             Self.context(of: quote, at: match, in: string).map { $0 == (prefix, suffix) } ?? false
         }

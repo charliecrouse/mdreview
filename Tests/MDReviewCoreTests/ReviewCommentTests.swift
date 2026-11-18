@@ -81,6 +81,12 @@ private let repeated = "Please ship it today, and then after that ship it again 
     #expect(first.reanchored(from: render(repeated), to: render(edited)).range == first.range)
 }
 
+@Test func rewritingTheCommentedCopyOfARepeatedQuoteDoesNotJumpToTheOtherCopy() throws {
+    let second = try comment(on: "ship it", in: repeated, occurrence: 1)
+    let edited = "Please ship it today, and then after that deploy again once every reviewer signs off."
+    #expect(second.reanchored(from: render(repeated), to: render(edited)).isOutdated)
+}
+
 @Test func reopenFollowsTheCopyOfARepeatedQuoteWithTheSameContext() throws {
     let second = try comment(on: "ship it", in: repeated, occurrence: 1)
     let moved = reanchor(second, to: "# Plan\n\nIntro.\n\n" + repeated)
