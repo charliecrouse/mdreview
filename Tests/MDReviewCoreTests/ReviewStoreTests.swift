@@ -75,7 +75,7 @@ private let comments = [
     let first = try store.request(file)
     let second = try store.request(file)
     let elsewhere = try store.request(other)
-    #expect(store.newestRequestedFile()?.lastPathComponent == "other.md")
+    #expect(store.newestRequest()?.file.lastPathComponent == "other.md")
     #expect(store.takeAnswer(for: first) == nil)
 
     #expect(store.answer(.review("# Review"), for: file) == 2)
@@ -87,7 +87,7 @@ private let comments = [
 
     #expect(store.answer(.closed, for: other) == 1)
     #expect(store.takeAnswer(for: elsewhere) == .closed)
-    #expect(store.newestRequestedFile() == nil)
+    #expect(store.newestRequest() == nil)
     #expect(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path) == ["plan.md"])
 }
 
@@ -97,15 +97,21 @@ private let comments = [
     defer { try? FileManager.default.removeItem(at: root) }
     let other = root.appending(path: "other.md")
 
-    let kept = try store.request(file)
     let older = try store.request(other)
-    #expect(store.closeRequests(except: file) == 1)
+    let kept = try store.request(file)
+    let cutoff = try #require(store.newestRequest())
+    #expect(cutoff.file.lastPathComponent == "plan.md")
+    let newer = try store.request(other)
+
+    #expect(store.closeRequests(except: file, madeBy: cutoff.date) == 1)
     #expect(store.takeAnswer(for: older) == .closed)
     #expect(store.takeAnswer(for: kept) == nil)
+    #expect(store.takeAnswer(for: newer) == nil)
 
-    #expect(store.closeRequests(except: nil) == 1)
+    #expect(store.closeRequests(except: nil, madeBy: .distantFuture) == 2)
     #expect(store.takeAnswer(for: kept) == .closed)
-    #expect(store.newestRequestedFile() == nil)
+    #expect(store.takeAnswer(for: newer) == .closed)
+    #expect(store.newestRequest() == nil)
 }
 
 @Test func handoffDropsRequestsWhoseCommandExited() throws {
@@ -116,7 +122,7 @@ private let comments = [
     #expect(!ReviewStore.isRunning(gone))
 
     let id = try store.request(file, from: gone)
-    #expect(store.newestRequestedFile() == nil)
+    #expect(store.newestRequest() == nil)
     #expect(store.answer(.review("# Review"), for: file) == 0)
     #expect(store.takeAnswer(for: id) == nil)
     #expect(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "store/Handoff").path).isEmpty)

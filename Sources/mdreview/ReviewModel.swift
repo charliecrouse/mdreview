@@ -49,11 +49,11 @@ final class ReviewModel {
     }
 
     /// Opens the file the newest waiting `mdreview <file>` command asked for, unless it's already open, and
-    /// ends the wait of every command asking for another file.
+    /// ends the wait of every earlier command asking for another file.
     func openRequestedFile() {
-        guard let url = store?.newestRequestedFile() else { return }
+        guard let (url, date) = store?.newestRequest() else { return }
         if !isOpen(url) { open(url) }
-        store?.closeRequests(except: fileURL)
+        store?.closeRequests(except: fileURL, madeBy: date)
     }
 
     private func isOpen(_ url: URL) -> Bool {

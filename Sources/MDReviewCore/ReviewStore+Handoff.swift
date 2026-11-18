@@ -30,28 +30,31 @@ extension ReviewStore {
         return id
     }
 
-    /// The file the most recent waiting request asked for.
-    public func newestRequestedFile() -> URL? {
-        liveRequests().max { $0.request.date < $1.request.date }.map { URL(fileURLWithPath: $0.request.path) }
+    /// The file the most recent waiting request asked for, and when it asked.
+    public func newestRequest() -> (file: URL, date: Date)? {
+        liveRequests().max { $0.request.date < $1.request.date }.map {
+            (URL(fileURLWithPath: $0.request.path), $0.request.date)
+        }
     }
 
     /// Answers every waiting request for `file` and returns how many there were.
     @discardableResult
     public func answer(_ answer: Answer, for file: URL) -> Int {
         let key = Self.key(for: file)
-        return self.answer(answer) { $0 == key }
+        return self.answer(answer) { $0.path == key }
     }
 
-    /// Answers every waiting request for a file other than `file` as closed, since only one file is open.
+    /// Answers every request made by `cutoff` for a file other than `file` as closed, since only one file is
+    /// open. Later requests are left for their own notification to open.
     @discardableResult
-    public func closeRequests(except file: URL?) -> Int {
+    public func closeRequests(except file: URL?, madeBy cutoff: Date) -> Int {
         let key = file.map(Self.key(for:))
-        return answer(.closed) { $0 != key }
+        return answer(.closed) { $0.path != key && $0.date <= cutoff }
     }
 
-    private func answer(_ answer: Answer, where matches: (String) -> Bool) -> Int {
+    private func answer(_ answer: Answer, where matches: (Request) -> Bool) -> Int {
         var answered = 0
-        for (url, request) in liveRequests() where matches(request.path) {
+        for (url, request) in liveRequests() where matches(request) {
             let id = url.deletingPathExtension().lastPathComponent
             let (data, ext) =
                 switch answer {
