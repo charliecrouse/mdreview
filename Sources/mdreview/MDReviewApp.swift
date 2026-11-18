@@ -1,6 +1,5 @@
 import SwiftUI
 
-@main
 struct MDReviewApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
     private var model: ReviewModel { delegate.model }

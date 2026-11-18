@@ -23,7 +23,11 @@ targets:
     platform: macOS
     sources:
       - Sources/mdreview
-      - App
+      - path: App
+        excludes: [mdreview]
+      # The command-line entry point; README's Install section says how to put it on PATH.
+      - path: App/mdreview
+        buildPhase: resources
     dependencies:
       - package: mdreview
         product: MDReviewCore
@@ -42,6 +46,8 @@ targets:
       - UITests
     dependencies:
       - target: MDReviewApp
+      - package: mdreview
+        product: MDReviewCore
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.charliecrouse.mdreview.uitests

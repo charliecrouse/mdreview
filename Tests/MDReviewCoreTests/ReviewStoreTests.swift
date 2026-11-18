@@ -64,3 +64,43 @@ private let comments = [
     try store.save(comments, for: file)
     #expect(try String(contentsOf: kept, encoding: .utf8) == "{ not json")
 }
+
+@Test func handoffAnswersEachWaitingRequestForTheSentFileOnce() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let other = root.appending(path: "other.md")
+    try "Other\n".write(to: other, atomically: true, encoding: .utf8)
+
+    let first = try store.request(file)
+    let second = try store.request(file)
+    let elsewhere = try store.request(other)
+    #expect(store.newestRequestedFile()?.lastPathComponent == "other.md")
+    #expect(store.takeAnswer(for: first) == nil)
+
+    #expect(store.answer(.review("# Review"), for: file) == 2)
+    #expect(store.takeAnswer(for: first) == .review("# Review"))
+    #expect(store.takeAnswer(for: second) == .review("# Review"))
+    #expect(store.takeAnswer(for: first) == nil)
+    #expect(store.takeAnswer(for: elsewhere) == nil)
+    #expect(store.answer(.review("# Again"), for: file) == 0)
+
+    #expect(store.answer(.closed, for: other) == 1)
+    #expect(store.takeAnswer(for: elsewhere) == .closed)
+    #expect(store.newestRequestedFile() == nil)
+    #expect(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path) == ["plan.md"])
+}
+
+@Test func handoffDropsRequestsWhoseCommandExited() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let gone = Int32.max
+    #expect(!ReviewStore.isRunning(gone))
+
+    let id = try store.request(file, from: gone)
+    #expect(store.newestRequestedFile() == nil)
+    #expect(store.answer(.review("# Review"), for: file) == 0)
+    #expect(store.takeAnswer(for: id) == nil)
+    #expect(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "store/Handoff").path).isEmpty)
+}

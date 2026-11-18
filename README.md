@@ -13,7 +13,9 @@ Open a `.md` file, select text in the rendered view and comment on it. Each comm
 
 **Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the inspector shows the path. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
 
-mdreview never writes into the folder that holds your Markdown. Everything it keeps lives in `~/Library/Application Support/mdreview/`: `Comments/` holds one JSON record per reviewed file, keyed by its path, and `Reviews/` holds the sent reviews. A review looks like this:
+An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait.
+
+mdreview never writes into the folder that holds your Markdown. Everything it keeps lives in `~/Library/Application Support/mdreview/`: `Comments/` holds one JSON record per reviewed file, keyed by its path, `Reviews/` holds the sent reviews, and `Handoff/` holds the requests and answers of `mdreview` commands while they wait. A review looks like this:
 
 ```markdown
 # Review of plan.md
@@ -48,6 +50,14 @@ swift run mdreview README.md
 
 For a standalone app, run `make bootstrap` once, then `make app`. It builds an ad-hoc signed `build/mdreview.app` with its icon; drag it to `/Applications`.
 
+To give agents the `mdreview` command, link the script inside the app into a folder on your `PATH`:
+
+```sh
+ln -s /Applications/mdreview.app/Contents/Resources/mdreview /usr/local/bin/mdreview
+```
+
+Then an agent runs `mdreview plan.md` and reads your review from the output.
+
 ## Usage
 
 | Action | How |
@@ -60,6 +70,7 @@ For a standalone app, run `make bootstrap` once, then `make app`. It builds an a
 | Jump to a comment or heading | Click it in the inspector or the sidebar |
 | Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
 | Send to Agent | ⌘↩, or the toolbar button. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; select the path in the inspector to copy it |
+| Review for a waiting agent | The agent runs `mdreview <file>`; comment, then Send to Agent. Every `mdreview` command waiting on that file gets the review |
 
 ## Limitations
 
@@ -67,7 +78,8 @@ For a standalone app, run `make bootstrap` once, then `make app`. It builds an a
 - Records for files you delete stay in `~/Library/Application Support/mdreview/` until you remove them.
 - One file at a time, and the Markdown is read-only.
 - A comment follows its quoted text as rendered. While the file is open, it shifts with edits around it. When an edit touches it, or one write changes text on both sides of it, it follows its quote only if the quote occurs exactly once in the changed text, both before and after the edit; otherwise it is marked outdated rather than moved to another copy. On reopen, a comment whose quote moved follows it only when the quote occurs exactly once; otherwise it is marked outdated. An outdated comment keeps the line numbers of the earlier version and stays outdated, across edits and reopens, until you delete it.
-- Send to Agent is clipboard plus file; there are no direct agent integrations.
+- Send to Agent is clipboard, file and the `mdreview` command; there are no agent plugins or MCP server.
+- The `mdreview` command runs from the `.app` only, not from `swift run`.
 - Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
 - Inline formatting that spans a soft line break (`**bold` on one line, `text**` on the next) renders literally. The renderer works line by line so every selection maps to exact source lines.
 - The `.app` is ad-hoc signed for local use: no Developer ID, notarization or DMG.
@@ -90,7 +102,7 @@ On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Home
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
-| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file |
+| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send |
 
 Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 
@@ -109,14 +121,17 @@ CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every 
   - `ReviewComment+Reanchor.swift`: moves a comment to its quoted text after the file changes, or marks it outdated.
   - `ReviewExport.swift`: the batched review an agent receives.
   - `ReviewStore.swift`: saved comments and sent reviews, kept in the app's Application Support folder.
+  - `ReviewStore+Handoff.swift`: the request and answer files behind the `mdreview` command.
 - `Sources/mdreview/`: the SwiftUI app.
-  - `MDReviewApp.swift`, `AppDelegate.swift`: the scene, menu commands and command-line file argument.
+  - `Main.swift`: starts the app, or the `mdreview` command when the bundled script passes `--wait`.
+  - `MDReviewApp.swift`, `AppDelegate.swift`: the scene, menu commands, command-line file argument and opening files an `mdreview` command asks for.
+  - `WaitCommand.swift`: the `mdreview <file>` command: opens the file in the app and waits for the review.
   - `ReviewModel.swift`: the open file, its comments (loaded and saved through the store), live reload and Send to Agent.
   - `FileWatcher.swift`: watches the open file, including atomic saves, deletion and recreation.
   - `Views/`: the split view with a glass sidebar (outline and comments) and the comment inspector.
   - `Reader/`: AppKit bridges: the `NSTextView` reader and the behind-window glass.
 - `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewCommentTests.swift`, `ReviewExportTests.swift`, `ReviewStoreTests.swift`).
-- `App/`: the app's asset catalog (icon). `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
+- `App/`: the app's asset catalog (icon) and `mdreview`, the command-line script the app bundles as a resource. `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
 - `.github/workflows/ci.yml`: the `check` job, which runs `make check` on GitHub Actions.
 - `scripts/docs-check.sh`: the README freshness check behind `make docs-check`.

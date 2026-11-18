@@ -1,3 +1,4 @@
+import MDReviewCore
 import XCTest
 
 final class MDReviewUITests: XCTestCase {
@@ -63,6 +64,23 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertTrue(outdated.exists)
         let recreated = try send(from: window, for: file)
         XCTAssertTrue(recreated.contains("## 1. fixture.md:3 (outdated)"), recreated)
+    }
+
+    /// What `mdreview <file>` does: leave a request, then launch the app with no file argument.
+    @MainActor func testOpensTheRequestedFileAndAnswersOnSend() throws {
+        let file = try fixture()
+        let handoff = ReviewStore(directory: store(for: file))
+        let id = try handoff.request(file)
+        let app = XCUIApplication()
+        app.launchArguments = ["-StoreDirectory", store(for: file).path]
+        app.launch()
+        let window = app.windows.firstMatch
+        commentOnWholeFile(in: window)
+
+        XCTAssertNil(handoff.takeAnswer(for: id))
+        _ = try send(from: window, for: file)
+        guard case .review(let review) = handoff.takeAnswer(for: id) else { return XCTFail("no review handed off") }
+        XCTAssertTrue(review.contains("Name the flag."), review)
     }
 
     private func fixture() throws -> URL {
