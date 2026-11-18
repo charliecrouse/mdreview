@@ -73,7 +73,7 @@ final class ReviewModel {
         let previous = rendered.text
         rendered = MarkdownRenderer.render(source)
         selection = NSRange(location: 0, length: 0)
-        comments = comments.map { $0.reanchored(from: previous, to: rendered.text) }
+        comments = comments.reanchored(from: previous, to: rendered.text)
         sortComments()
     }
 

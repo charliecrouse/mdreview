@@ -33,13 +33,33 @@ extension ReviewComment {
     /// changed lines both before and after the edit, once surrounding text is compared, and is otherwise marked
     /// outdated rather than guessing between copies. An outdated comment stays outdated.
     public func reanchored(from old: NSAttributedString, to new: NSAttributedString) -> ReviewComment {
+        [self].reanchored(from: old, to: new)[0]
+    }
+
+    /// The line-by-line diff between two versions of the text, computed once and shared by every comment.
+    fileprivate struct LineDiff {
+        let new: NSAttributedString
+        let oldString: NSString
+        let newString: NSString
+        let oldLines: [NSRange]
+        let newLines: [NSRange]
+        let kept: [Int?]
+
+        init(from old: NSAttributedString, to new: NSAttributedString) {
+            self.new = new
+            oldString = old.string as NSString
+            newString = new.string as NSString
+            oldLines = ReviewComment.lines(of: oldString)
+            newLines = ReviewComment.lines(of: newString)
+            kept = ReviewComment.unchangedLines(
+                from: oldLines.map(oldString.substring(with:)), to: newLines.map(newString.substring(with:)))
+        }
+    }
+
+    fileprivate func reanchored(through diff: LineDiff) -> ReviewComment {
         if isOutdated { return self }
-        let oldString = old.string as NSString
-        let newString = new.string as NSString
-        let oldLines = Self.lines(of: oldString)
-        let newLines = Self.lines(of: newString)
-        let kept = Self.unchangedLines(
-            from: oldLines.map(oldString.substring(with:)), to: newLines.map(newString.substring(with:)))
+        let (new, oldString, newString) = (diff.new, diff.oldString, diff.newString)
+        let (oldLines, newLines, kept) = (diff.oldLines, diff.newLines, diff.kept)
         let first = oldLines.lastIndex { $0.location <= range.location } ?? 0
         let last = oldLines.lastIndex { $0.location <= max(range.location, NSMaxRange(range) - 1) } ?? first
         if let start = kept[first], (first...last).allSatisfy({ kept[$0] == start + $0 - first }) {
@@ -152,5 +172,13 @@ extension ReviewComment {
         var moved = self
         moved.isOutdated = true
         return moved
+    }
+}
+
+extension [ReviewComment] {
+    /// Every comment carried from `old` to `new`, diffing the two texts once for all of them.
+    public func reanchored(from old: NSAttributedString, to new: NSAttributedString) -> [ReviewComment] {
+        let diff = ReviewComment.LineDiff(from: old, to: new)
+        return map { $0.reanchored(through: diff) }
     }
 }
