@@ -9,6 +9,7 @@ struct ReaderView: NSViewRepresentable {
     let focused: ReviewComment.ID?
     let scrollTarget: NSRange?
     let onSelect: @MainActor (NSRange) -> Void
+    let onSelectionRect: @MainActor (CGRect?) -> Void
     let onComment: @MainActor () -> Void
     let onScrolled: @MainActor @Sendable () -> Void
 
@@ -33,6 +34,10 @@ struct ReaderView: NSViewRepresentable {
         scrollView.hasVerticalScroller = true
         scrollView.drawsBackground = false
         context.coordinator.textView = textView
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            context.coordinator, selector: #selector(Coordinator.moved), name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView)
         return scrollView
     }
 
@@ -68,6 +73,16 @@ struct ReaderView: NSViewRepresentable {
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let textView else { return }
             parent?.onSelect(textView.selectedRange())
+            moved()
+        }
+
+        /// Reports where the selection sits in the reader, for the floating comment button.
+        @objc func moved() {
+            guard let textView, let scroll = textView.enclosingScrollView else { return }
+            let rect = (textView as? PaperTextView)?.selectionRect(in: scroll)
+            // SwiftUI's origin is top-left; the scroll view's is bottom-left.
+            parent?.onSelectionRect(
+                rect.map { CGRect(x: $0.minX, y: scroll.bounds.height - $0.maxY, width: $0.width, height: $0.height) })
         }
 
         func textView(_ view: NSTextView, menu: NSMenu, for event: NSEvent, at charIndex: Int) -> NSMenu? {

@@ -4,6 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @Bindable var model: ReviewModel
     @State private var showInspector = true
+    @State private var selectionRect: CGRect?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
 
@@ -30,9 +31,14 @@ struct ContentView: View {
                         focused: model.focusedComment,
                         scrollTarget: model.scrollTarget,
                         onSelect: { model.selection = $0 },
+                        onSelectionRect: { selectionRect = $0 },
                         onComment: { model.addComment() },
                         onScrolled: { model.scrollTarget = nil }
                     )
+                    .overlay(alignment: .topLeading) {
+                        if model.canComment, let rect = selectionRect { CommentPill(model: model, selection: rect) }
+                    }
+                    .overlay(alignment: .bottom) { SendToast(model: model) }
                     .overlay(alignment: .top) {
                         if model.isMissing {
                             Label(
@@ -74,17 +80,19 @@ struct ContentView: View {
         )
         .toolbar {
             ToolbarItem {
-                Button("Add Comment", systemImage: "text.bubble") { model.addComment() }
-                    .disabled(!model.canComment)
-                    .help("Comment on the selected text (⌥⌘M)")
-            }
-            ToolbarSpacer(.fixed)
-            ToolbarItem {
                 Button {
                     model.send()
                 } label: {
-                    Label("Send \(model.comments.count) to Agent", systemImage: "paperplane.fill")
-                        .labelStyle(.titleAndIcon)
+                    Label(
+                        model.agentWaiting ? "Send to Waiting Agent" : "Send to Agent", systemImage: "paperplane.fill"
+                    )
+                    .labelStyle(.titleAndIcon)
+                    if !model.comments.isEmpty {
+                        Text("\(model.comments.count)")
+                            .font(.caption.bold().monospacedDigit())
+                            .padding(.horizontal, 6)
+                            .background(.white.opacity(0.25), in: .capsule)
+                    }
                 }
                 .buttonStyle(.glassProminent)
                 .disabled(model.comments.isEmpty)

@@ -7,4 +7,12 @@ final class PaperTextView: NSTextView {
         let inset = NSSize(width: max(40, (newSize.width - 720) / 2), height: 36)
         if textContainerInset != inset { textContainerInset = inset }
     }
+
+    /// The first line of the selection in `view`'s coordinates, or nil with no selection.
+    func selectionRect(in view: NSView) -> CGRect? {
+        let range = selectedRange()
+        guard range.length > 0, let window else { return nil }
+        let onScreen = firstRect(forCharacterRange: range, actualRange: nil)
+        return view.convert(window.convertFromScreen(onScreen), from: nil)
+    }
 }

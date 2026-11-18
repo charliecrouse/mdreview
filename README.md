@@ -63,14 +63,15 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 | Action | How |
 |---|---|
 | Open a file | ⌘O, or drop a `.md` file on the window |
-| Comment on a selection | Select text, then press ⌥⌘M. Right-click → **Add Comment** and the toolbar button work too |
+| Comment on a selection | Select text, then press ⌥⌘M. A **Comment ⌥⌘M** button floats by the selection; right-click → **Add Comment** and the **+** in the inspector header work too |
 | Follow an agent's edits | Nothing to do: the open file reloads when it changes on disk, keeping your scroll position |
 | Edit or delete a comment | Type in its card in the inspector, or click the trash icon. Changes save as you make them |
 | Pick up a review later | Reopen the file; its saved comments come back |
-| Jump to a comment or heading | Click it in the inspector or the sidebar |
+| Jump to a comment or heading | Click it in the inspector or the sidebar. **Review → Next / Previous Comment** (⌃⌘↓ / ⌃⌘↑) or the arrows in the inspector header step through the comments |
+| Filter comments | **All / Open / Outdated** in the inspector header, with counts |
 | Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
-| Send to Agent | ⌘↩, or the toolbar button. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; select the path in the inspector to copy it |
-| Review for a waiting agent | The agent runs `mdreview <file>`; comment, then Send to Agent. Every `mdreview` command waiting on that file gets the review |
+| Send to Agent | ⌘↩, or the toolbar button, which shows the comment count. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; the result appears as a toast over the document, where you can select the saved path to copy it |
+| Review for a waiting agent | The agent runs `mdreview <file>`; an **An agent is waiting** line shows in the inspector header and the button reads **Send to Waiting Agent**. Comment, then send. Every `mdreview` command waiting on that file gets the review |
 
 ## Limitations
 

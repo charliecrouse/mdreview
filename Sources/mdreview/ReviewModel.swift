@@ -13,6 +13,9 @@ final class ReviewModel {
     var focusedComment: ReviewComment.ID?
     var scrollTarget: NSRange?
     var status: String?
+    var filter = CommentFilter.all
+    /// A command-line `mdreview <file>` is waiting for this file's review.
+    private(set) var agentWaiting = false
     var error: String?
     /// The open file was deleted or moved away; the last version stays on screen until it comes back.
     var isMissing = false
@@ -29,6 +32,14 @@ final class ReviewModel {
             && MarkdownRenderer.quote(of: selection, in: rendered.text) != nil
     }
 
+    /// The comments the inspector lists, in document order.
+    var visibleComments: [ReviewComment] { comments.filter(filter.includes) }
+
+    /// 1-based place of the focused comment among the visible ones.
+    var focusedPosition: Int? {
+        visibleComments.firstIndex { $0.id == focusedComment }.map { $0 + 1 }
+    }
+
     func open(_ url: URL) {
         do {
             let source = try String(contentsOf: url, encoding: .utf8)
@@ -43,6 +54,7 @@ final class ReviewModel {
             focusedComment = nil
             isMissing = false
             watcher = FileWatcher(url: url) { [weak self] in self?.reload() }
+            refreshAgentWaiting()
         } catch {
             self.error = "Couldn't open \(url.lastPathComponent): \(error.localizedDescription)"
         }
@@ -54,6 +66,12 @@ final class ReviewModel {
         guard let (url, date) = store?.newestRequest() else { return }
         if !isOpen(url) { open(url) }
         store?.closeRequests(except: fileURL, madeBy: date)
+        refreshAgentWaiting()
+    }
+
+    // ponytail: checked on open, handoff and send only; a command killed meanwhile shows until the next one.
+    private func refreshAgentWaiting() {
+        agentWaiting = fileURL.map { store?.isWaiting(for: $0) ?? false } ?? false
     }
 
     private func isOpen(_ url: URL) -> Bool {
@@ -104,6 +122,15 @@ final class ReviewModel {
         if !comment.isOutdated { scrollTarget = comment.range }
     }
 
+    /// Moves focus `offset` comments along the visible list, wrapping at the ends.
+    func step(by offset: Int) {
+        let list = visibleComments
+        guard !list.isEmpty else { return }
+        let current = list.firstIndex { $0.id == focusedComment }
+        let next = current.map { ($0 + offset + list.count) % list.count } ?? (offset > 0 ? 0 : list.count - 1)
+        reveal(list[next])
+    }
+
     func reveal(line: Int) {
         if let range = MarkdownRenderer.range(ofLine: line, in: rendered.text) {
             scrollTarget = NSRange(location: range.location, length: 0)
@@ -118,6 +145,7 @@ final class ReviewModel {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(review, forType: .string)
         let handedOff = (store?.answer(.review(review), for: url) ?? 0) > 0
+        refreshAgentWaiting()
         let copied =
             "\(handedOff ? "Sent to the waiting command and copied" : "Copied") "
             + "\(comments.count) comment\(comments.count == 1 ? "" : "s")"

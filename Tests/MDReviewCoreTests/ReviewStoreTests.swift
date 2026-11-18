@@ -127,3 +127,16 @@ private let comments = [
     #expect(store.takeAnswer(for: id) == nil)
     #expect(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "store/Handoff").path).isEmpty)
 }
+
+@Test func isWaitingOnlyForTheRequestedFileWhileItsCommandRuns() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    #expect(!store.isWaiting(for: file))
+    _ = try store.request(file)
+    #expect(store.isWaiting(for: file))
+    #expect(!store.isWaiting(for: root.appending(path: "other.md")))
+    store.answer(.closed, for: file)
+    #expect(!store.isWaiting(for: file))
+}

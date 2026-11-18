@@ -7,37 +7,36 @@ struct CommentsInspector: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if model.comments.isEmpty {
+            if model.visibleComments.isEmpty {
                 ContentUnavailableView(
-                    "No comments", systemImage: "text.bubble",
-                    description: Text("Select text in the document, then press ⌥⌘M or right-click → Add Comment."))
+                    model.comments.isEmpty ? "No comments" : "No \(model.filter.rawValue.lowercased()) comments",
+                    systemImage: "text.bubble",
+                    description: Text(
+                        model.comments.isEmpty
+                            ? "Select text in the document, then press ⌥⌘M or right-click → Add Comment."
+                            : "Choose another filter above."))
             } else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
                         ForEach(Array($model.comments.enumerated()), id: \.element.id) { index, $comment in
-                            CommentCard(
-                                number: index + 1,
-                                comment: $comment,
-                                isFocused: model.focusedComment == comment.id,
-                                focusedField: $focusedField,
-                                onSelect: { model.reveal(comment) },
-                                onDelete: { model.delete(comment.id) }
-                            )
+                            if model.filter.includes(comment) {
+                                CommentCard(
+                                    number: index + 1,
+                                    comment: $comment,
+                                    isFocused: model.focusedComment == comment.id,
+                                    focusedField: $focusedField,
+                                    onSelect: { model.reveal(comment) },
+                                    onDelete: { model.delete(comment.id) }
+                                )
+                            }
                         }
                     }
                     .padding(12)
                 }
             }
-            if let status = model.status {
-                Text(status)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)  // so the saved review's path can be copied
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)  // glass fills the column even when empty
+        .safeAreaInset(edge: .top, spacing: 0) { InspectorHeader(model: model) }
         .background(BehindWindowGlass().ignoresSafeArea())
         .onChange(of: model.focusedComment) { _, id in focusedField = id }
     }
