@@ -96,10 +96,11 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
 
 @Test func deletedTextMarksTheCommentOutdatedAndKeepsItsOldAnchor() throws {
     let original = try comment(on: "the importer", in: "# Plan\n\nShip the importer.\n")
-    let outdated = reanchor(original, to: "# Plan\n\nShip the exporter.\n")
+    let exporter = render("# Plan\n\nShip the exporter.\n")
+    let outdated = original.reanchored(from: render("# Plan\n\nShip the importer.\n"), to: exporter)
     #expect(outdated.isOutdated)
     #expect(outdated.lines == original.lines && outdated.text == "Note")
-    let restored = reanchor(outdated, to: "# Plan\n\nShip the importer.\n")
+    let restored = outdated.reanchored(from: exporter, to: render("# Plan\n\nShip the importer.\n"))
     #expect(!restored.isOutdated && restored.lines == 3...3)
 }
 
@@ -107,6 +108,21 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     let original = try comment(on: "the importer", in: "Ship the importer.\n")
     let moved = reanchor(original, to: "# Plan\n\nShip **the importer**.\n")
     #expect(!moved.isOutdated && moved.lines == 3...3)
+}
+
+@Test func reopeningKeepsAnOutdatedCommentOutdatedEvenWhenItsQuoteIsUnique() throws {
+    let source = "Ship it.\n\nWait.\n\nShip it.\n"
+    let second = try comment(on: "Ship it", in: source, occurrence: 1)
+    let rewritten = second.reanchored(from: render(source), to: render("Ship it.\n\nWait.\n\nHold it.\n"))
+    #expect(rewritten.isOutdated)
+    #expect(reanchor(rewritten, to: "Ship it.\n\nWait.\n\nHold it.\n") == rewritten)
+}
+
+@Test func outdatedFlagSurvivesSavingAndLoading() throws {
+    var outdated = try comment(on: "Ship it", in: "Ship it.\n")
+    outdated.isOutdated = true
+    let decoded = try JSONDecoder().decode(ReviewComment.self, from: JSONEncoder().encode(outdated))
+    #expect(decoded == outdated && decoded.isOutdated)
 }
 
 @Test func commentSavedWithoutAnOutdatedFlagStillDecodes() throws {

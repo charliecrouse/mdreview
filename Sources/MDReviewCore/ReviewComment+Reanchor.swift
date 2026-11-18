@@ -2,9 +2,14 @@ import AppKit
 
 extension ReviewComment {
     /// The comment re-anchored in `text` with no earlier version to compare against, as when a file is reopened.
-    /// It stays put while its quote is still at its range, moves only when the quote occurs exactly once,
-    /// and is otherwise marked outdated rather than guessing between occurrences.
+    /// An outdated comment stays outdated: with no edit to compare, another copy of its quote proves nothing.
     public func reanchored(in text: NSAttributedString) -> ReviewComment {
+        isOutdated ? self : located(in: text)
+    }
+
+    /// Stays put while the quote is still at `range`, moves only when the quote occurs exactly once,
+    /// and is otherwise marked outdated rather than guessing between occurrences.
+    private func located(in text: NSAttributedString) -> ReviewComment {
         let string = text.string as NSString
         if !isOutdated, MarkdownRenderer.quote(of: range, in: text) == quote {
             return anchored(at: range, in: text)
@@ -18,7 +23,7 @@ extension ReviewComment {
     /// it moves only if its quote occurs exactly once in the changed text both before and after the edit,
     /// and is otherwise marked outdated rather than guessing between copies.
     public func reanchored(from old: NSAttributedString, to new: NSAttributedString) -> ReviewComment {
-        if isOutdated { return reanchored(in: new) }
+        if isOutdated { return located(in: new) }
         let oldString = old.string as NSString
         let newString = new.string as NSString
         let shortest = min(oldString.length, newString.length)
