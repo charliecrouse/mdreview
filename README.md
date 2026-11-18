@@ -11,7 +11,7 @@
 
 Open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers, so an agent knows exactly where to look. Comments are saved as you go and come back when you reopen the file, even after a rename or move.
 
-**Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the inspector shows the path. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
+**Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the path appears in a toast over the document. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
 
 An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait.
 
