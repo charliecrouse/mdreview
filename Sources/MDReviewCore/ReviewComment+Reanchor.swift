@@ -2,16 +2,12 @@ import AppKit
 
 extension ReviewComment {
     /// The comment re-anchored in `text` with no earlier version to compare against, as when a file is reopened.
-    /// An outdated comment stays outdated: with no edit to compare, another copy of its quote proves nothing.
-    public func reanchored(in text: NSAttributedString) -> ReviewComment {
-        isOutdated ? self : located(in: text)
-    }
-
     /// Stays put while the quote is still at `range`, moves only when the quote occurs exactly once,
-    /// and is otherwise marked outdated rather than guessing between occurrences.
-    private func located(in text: NSAttributedString) -> ReviewComment {
+    /// and is otherwise marked outdated rather than guessing between occurrences. An outdated comment stays outdated.
+    public func reanchored(in text: NSAttributedString) -> ReviewComment {
+        if isOutdated { return self }
         let string = text.string as NSString
-        if !isOutdated, MarkdownRenderer.quote(of: range, in: text) == quote {
+        if MarkdownRenderer.quote(of: range, in: text) == quote {
             return anchored(at: range, in: text)
         }
         let matches = Self.occurrences(of: quote, in: string, within: NSRange(location: 0, length: string.length))
@@ -21,9 +17,9 @@ extension ReviewComment {
     /// The comment carried from `old` to `new` through the one span that changed between them:
     /// it keeps its offset before the change and shifts with the text after it. When it overlaps the change,
     /// it moves only if its quote occurs exactly once in the changed text both before and after the edit,
-    /// and is otherwise marked outdated rather than guessing between copies.
+    /// and is otherwise marked outdated rather than guessing between copies. An outdated comment stays outdated.
     public func reanchored(from old: NSAttributedString, to new: NSAttributedString) -> ReviewComment {
-        if isOutdated { return located(in: new) }
+        if isOutdated { return self }
         let oldString = old.string as NSString
         let newString = new.string as NSString
         let shortest = min(oldString.length, newString.length)

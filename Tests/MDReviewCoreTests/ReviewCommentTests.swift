@@ -100,8 +100,17 @@ private func reanchor(_ comment: ReviewComment, to source: String) -> ReviewComm
     let outdated = original.reanchored(from: render("# Plan\n\nShip the importer.\n"), to: exporter)
     #expect(outdated.isOutdated)
     #expect(outdated.lines == original.lines && outdated.text == "Note")
-    let restored = outdated.reanchored(from: exporter, to: render("# Plan\n\nShip the importer.\n"))
-    #expect(!restored.isOutdated && restored.lines == 3...3)
+    #expect(outdated.reanchored(from: exporter, to: render("# Plan\n\nShip the importer.\n")) == outdated)
+}
+
+@Test func outdatedCommentStaysOutdatedAcrossLaterEdits() throws {
+    let source = "Ship it.\n\nWait.\n\nShip it.\n"
+    let second = try comment(on: "Ship it", in: source, occurrence: 1)
+    let rewrittenSource = "Ship it.\n\nWait.\n\nHold it.\n"
+    let rewritten = second.reanchored(from: render(source), to: render(rewrittenSource))
+    #expect(rewritten.isOutdated)
+    let appended = rewritten.reanchored(from: render(rewrittenSource), to: render(rewrittenSource + "\n\nDone.\n"))
+    #expect(appended == rewritten && appended.range == second.range && appended.lines == second.lines)
 }
 
 @Test func reformattedTextStillMatchesItsRenderedQuote() throws {
