@@ -38,7 +38,7 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertEqual(reloaded.value as? String, "Name the flag.")
     }
 
-    @MainActor func testOutsideEditsMoveFlagAndRestoreComments() throws {
+    @MainActor func testOutsideEditsMoveFlagAndSurviveDeletion() throws {
         let file = try fixture()
         let window = launch(file).windows.firstMatch
         commentOnWholeFile(in: window)
@@ -54,15 +54,15 @@ final class MDReviewUITests: XCTestCase {
         try "# Plan\n\nShip the exporter.\n".write(to: file, atomically: true, encoding: .utf8)
         XCTAssertTrue(outdated.waitForExistence(timeout: 5))
 
-        // Deleting the file shows that state; recreating it reloads and restores the comment.
+        // Deleting the file shows that state; recreating it reloads, and the comment stays outdated.
         let missing = window.descendants(matching: .any)["fileMissing"]
         try FileManager.default.removeItem(at: file)
         XCTAssertTrue(missing.waitForExistence(timeout: 5))
         try "Ship the importer behind a feature flag.\n".write(to: file, atomically: true, encoding: .utf8)
         XCTAssertTrue(missing.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(outdated.waitForNonExistence(timeout: 5))
-        let restored = try send(from: window, for: file)
-        XCTAssertTrue(restored.contains("## 1. fixture.md:1\n"), restored)
+        XCTAssertTrue(outdated.exists)
+        let recreated = try send(from: window, for: file)
+        XCTAssertTrue(recreated.contains("## 1. fixture.md:3 (outdated)"), recreated)
     }
 
     private func fixture() throws -> URL {
