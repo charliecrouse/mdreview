@@ -12,8 +12,11 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     /// The quoted text was rewritten, removed or can't be told apart from another copy,
     /// so `lines` and `range` point at an earlier version.
     public var isOutdated = false
+    /// Rendered text just before and after the quote, which tells one copy of a repeated quote from another.
+    public var prefix = ""
+    public var suffix = ""
 
-    private enum CodingKeys: String, CodingKey { case id, lines, quote, text, range, isOutdated }
+    private enum CodingKeys: String, CodingKey { case id, lines, quote, text, range, isOutdated, prefix, suffix }
 
     public init(id: UUID = UUID(), lines: ClosedRange<Int>, quote: String, text: String = "", range: NSRange) {
         self.id = id
@@ -23,7 +26,18 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
         self.range = range
     }
 
-    /// Records saved before comments could go outdated have no `isOutdated`; they load as current.
+    /// A comment on the rendered `selection`, or nil when it covers no source line or only whitespace.
+    public init?(selection: NSRange, in text: NSAttributedString) {
+        guard let lines = MarkdownRenderer.lineRange(of: selection, in: text),
+            let quote = MarkdownRenderer.quote(of: selection, in: text),
+            let context = Self.context(of: quote, at: selection, in: text.string as NSString)
+        else { return nil }
+        self.init(lines: lines, quote: quote, range: selection)
+        (prefix, suffix) = context
+    }
+
+    /// Records saved before comments could go outdated have no `isOutdated`, and older ones no context;
+    /// they load as current, and a repeated quote without context can't be told apart.
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         id = try values.decode(UUID.self, forKey: .id)
@@ -32,6 +46,8 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
         text = try values.decode(String.self, forKey: .text)
         range = try values.decode(NSRange.self, forKey: .range)
         isOutdated = try values.decodeIfPresent(Bool.self, forKey: .isOutdated) ?? false
+        prefix = try values.decodeIfPresent(String.self, forKey: .prefix) ?? ""
+        suffix = try values.decodeIfPresent(String.self, forKey: .suffix) ?? ""
     }
 
     public var lineLabel: String {

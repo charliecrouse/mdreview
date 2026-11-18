@@ -84,10 +84,7 @@ final class ReviewModel {
     }
 
     func addComment() {
-        guard let lines = MarkdownRenderer.lineRange(of: selection, in: rendered.text),
-            let quote = MarkdownRenderer.quote(of: selection, in: rendered.text)
-        else { return }
-        let comment = ReviewComment(lines: lines, quote: quote, range: selection)
+        guard let comment = ReviewComment(selection: selection, in: rendered.text) else { return }
         comments.append(comment)
         sortComments()
         focusedComment = comment.id
