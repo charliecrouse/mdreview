@@ -6,7 +6,8 @@ extension ReviewComment {
 
     /// The comment re-anchored in `text` with no earlier version to compare against, as when a file is reopened.
     /// Stays put while the quote is still at `range`, moves only when one copy of the quote is left once its
-    /// surrounding text is compared, and is otherwise marked outdated rather than guessing between copies.
+    /// surrounding text is compared and that copy keeps at least one side of it, and is otherwise marked outdated
+    /// rather than guessing between copies.
     /// An outdated comment stays outdated.
     public func reanchored(in text: NSAttributedString) -> ReviewComment {
         if isOutdated { return self }
@@ -15,7 +16,16 @@ extension ReviewComment {
             return anchored(at: range, in: text)
         }
         let matches = candidates(in: string, within: NSRange(location: 0, length: string.length))
-        return matches.count == 1 ? anchored(at: matches[0], in: text) : outdated()
+        guard matches.count == 1, sharesContext(at: matches[0], in: string) else { return outdated() }
+        return anchored(at: matches[0], in: text)
+    }
+
+    /// Whether a lone copy keeps at least one side of the saved surrounding text. A comment saved without any
+    /// context has nothing to compare and is accepted.
+    private func sharesContext(at match: NSRange, in string: NSString) -> Bool {
+        if prefix.isEmpty && suffix.isEmpty { return true }
+        guard let context = Self.context(of: quote, at: match, in: string) else { return false }
+        return context.prefix == prefix || context.suffix == suffix
     }
 
     /// The comment carried from `old` to `new` through a line-by-line diff: it shifts with its lines while they
