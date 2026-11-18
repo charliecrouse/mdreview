@@ -39,8 +39,19 @@ extension ReviewStore {
     @discardableResult
     public func answer(_ answer: Answer, for file: URL) -> Int {
         let key = Self.key(for: file)
+        return self.answer(answer) { $0 == key }
+    }
+
+    /// Answers every waiting request for a file other than `file` as closed, since only one file is open.
+    @discardableResult
+    public func closeRequests(except file: URL?) -> Int {
+        let key = file.map(Self.key(for:))
+        return answer(.closed) { $0 != key }
+    }
+
+    private func answer(_ answer: Answer, where matches: (String) -> Bool) -> Int {
         var answered = 0
-        for (url, request) in liveRequests() where request.path == key {
+        for (url, request) in liveRequests() where matches(request.path) {
             let id = url.deletingPathExtension().lastPathComponent
             let (data, ext) =
                 switch answer {

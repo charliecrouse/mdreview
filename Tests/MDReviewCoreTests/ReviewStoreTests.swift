@@ -91,6 +91,23 @@ private let comments = [
     #expect(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path) == ["plan.md"])
 }
 
+@Test func handoffClosesRequestsForEveryOtherFile() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let other = root.appending(path: "other.md")
+
+    let kept = try store.request(file)
+    let older = try store.request(other)
+    #expect(store.closeRequests(except: file) == 1)
+    #expect(store.takeAnswer(for: older) == .closed)
+    #expect(store.takeAnswer(for: kept) == nil)
+
+    #expect(store.closeRequests(except: nil) == 1)
+    #expect(store.takeAnswer(for: kept) == .closed)
+    #expect(store.newestRequestedFile() == nil)
+}
+
 @Test func handoffDropsRequestsWhoseCommandExited() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))

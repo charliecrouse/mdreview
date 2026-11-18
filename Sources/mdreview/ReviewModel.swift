@@ -48,11 +48,12 @@ final class ReviewModel {
         }
     }
 
-    /// Opens the file a waiting `mdreview <file>` command asked for, unless it's already open.
+    /// Opens the file the newest waiting `mdreview <file>` command asked for, unless it's already open, and
+    /// ends the wait of every command asking for another file.
     func openRequestedFile() {
-        guard let url = store?.newestRequestedFile(), !isOpen(url) else { return }
-        open(url)
-        if !isOpen(url) { store?.answer(.closed, for: url) }
+        guard let url = store?.newestRequestedFile() else { return }
+        if !isOpen(url) { open(url) }
+        store?.closeRequests(except: fileURL)
     }
 
     private func isOpen(_ url: URL) -> Bool {
