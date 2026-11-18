@@ -19,7 +19,7 @@ public struct ReviewStore: Sendable {
         var comments: [ReviewComment]
     }
 
-    private let directory: URL
+    let directory: URL
     private var records: URL { directory.appending(path: "Comments", directoryHint: .isDirectory) }
 
     public init(directory: URL) {
@@ -97,7 +97,7 @@ public struct ReviewStore: Sendable {
     }
 
     /// Symlinks resolved too, because a resolved bookmark comes back as the real path.
-    private static func key(for file: URL) -> String {
+    static func key(for file: URL) -> String {
         file.standardizedFileURL.resolvingSymlinksInPath().path
     }
 

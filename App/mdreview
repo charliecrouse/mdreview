@@ -1,0 +1,3 @@
+#!/bin/sh
+# The command-line entry point: symlink it onto your PATH. It runs the app's own executable as the command.
+exec "$(dirname "$(realpath "$0")")/../MacOS/mdreview" --wait "$@"

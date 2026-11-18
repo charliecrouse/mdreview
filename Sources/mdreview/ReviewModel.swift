@@ -32,6 +32,7 @@ final class ReviewModel {
     func open(_ url: URL) {
         do {
             let source = try String(contentsOf: url, encoding: .utf8)
+            if let previous = fileURL, !isOpen(url) { store?.answer(.closed, for: previous) }
             fileURL = url
             self.source = source
             rendered = MarkdownRenderer.render(source)
@@ -45,6 +46,18 @@ final class ReviewModel {
         } catch {
             self.error = "Couldn't open \(url.lastPathComponent): \(error.localizedDescription)"
         }
+    }
+
+    /// Opens the file the newest waiting `mdreview <file>` command asked for, unless it's already open, and
+    /// ends the wait of every earlier command asking for another file.
+    func openRequestedFile() {
+        guard let (url, date) = store?.newestRequest() else { return }
+        if !isOpen(url) { open(url) }
+        store?.closeRequests(except: fileURL, madeBy: date)
+    }
+
+    private func isOpen(_ url: URL) -> Bool {
+        fileURL?.resolvingSymlinksInPath() == url.resolvingSymlinksInPath()
     }
 
     /// Re-renders after an outside edit and moves each comment to follow its text.
@@ -100,13 +113,17 @@ final class ReviewModel {
         }
     }
 
-    /// Copies the batched review to the clipboard and saves it in the app's storage.
+    /// Copies the batched review to the clipboard, saves it in the app's storage and hands it to any
+    /// `mdreview <file>` command waiting for it.
     func send() {
         guard let url = fileURL, !comments.isEmpty else { return }
         let review = ReviewExport.markdown(file: url, comments: comments)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(review, forType: .string)
-        let copied = "Copied \(comments.count) comment\(comments.count == 1 ? "" : "s")"
+        let handedOff = (store?.answer(.review(review), for: url) ?? 0) > 0
+        let copied =
+            "\(handedOff ? "Sent to the waiting command and copied" : "Copied") "
+            + "\(comments.count) comment\(comments.count == 1 ? "" : "s")"
         guard let store else {
             status = copied
             return
@@ -145,7 +162,7 @@ final class ReviewModel {
         }
     }
 
-    private nonisolated static func makeStore() -> ReviewStore? {
+    nonisolated static func makeStore() -> ReviewStore? {
         // The UI test passes `-StoreDirectory <dir>` so it stays out of the user's Application Support.
         if let dir = UserDefaults.standard.string(forKey: "StoreDirectory") {
             return ReviewStore(directory: URL(fileURLWithPath: dir, isDirectory: true))
