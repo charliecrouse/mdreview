@@ -35,9 +35,9 @@ final class ReviewModel {
     /// The comments the inspector lists, in document order.
     var visibleComments: [ReviewComment] { comments.filter(filter.includes) }
 
-    /// 1-based place of the focused comment among the visible ones.
+    /// 1-based number of the focused comment in the full list, as the export numbers it.
     var focusedPosition: Int? {
-        visibleComments.firstIndex { $0.id == focusedComment }.map { $0 + 1 }
+        comments.firstIndex { $0.id == focusedComment }.map { $0 + 1 }
     }
 
     func open(_ url: URL) {

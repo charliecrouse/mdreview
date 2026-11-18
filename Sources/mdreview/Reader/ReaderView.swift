@@ -79,7 +79,9 @@ struct ReaderView: NSViewRepresentable {
         /// Reports where the selection sits in the reader, for the floating comment button.
         @objc func moved() {
             guard let textView, let scroll = textView.enclosingScrollView else { return }
-            let rect = (textView as? PaperTextView)?.selectionRect(in: scroll)
+            let rect = (textView as? PaperTextView)?.selectionRect(in: scroll).flatMap {
+                scroll.bounds.intersects($0) ? $0 : nil
+            }
             // SwiftUI's origin is top-left; the scroll view's is bottom-left.
             parent?.onSelectionRect(
                 rect.map { CGRect(x: $0.minX, y: scroll.bounds.height - $0.maxY, width: $0.width, height: $0.height) })

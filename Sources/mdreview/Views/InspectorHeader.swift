@@ -15,7 +15,7 @@ struct InspectorHeader: View {
                 Text("Comments").font(.headline)
                 Spacer()
                 if let position = model.focusedPosition {
-                    Text("\(position) of \(model.visibleComments.count)")
+                    Text("\(position) of \(model.comments.count)")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
