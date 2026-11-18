@@ -52,6 +52,7 @@ final class ReviewModel {
     func openRequestedFile() {
         guard let url = store?.newestRequestedFile(), !isOpen(url) else { return }
         open(url)
+        if !isOpen(url) { store?.answer(.closed, for: url) }
     }
 
     private func isOpen(_ url: URL) -> Bool {
