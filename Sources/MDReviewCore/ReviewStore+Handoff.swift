@@ -37,6 +37,12 @@ extension ReviewStore {
         }
     }
 
+    /// Whether a command is waiting for the review of `file`.
+    public func isWaiting(for file: URL) -> Bool {
+        let key = Self.key(for: file)
+        return liveRequests().contains { $0.request.path == key }
+    }
+
     /// Answers every waiting request for `file` and returns how many there were.
     @discardableResult
     public func answer(_ answer: Answer, for file: URL) -> Int {

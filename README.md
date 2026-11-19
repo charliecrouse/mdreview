@@ -11,7 +11,7 @@
 
 Open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers, so an agent knows exactly where to look. Comments are saved as you go and come back when you reopen the file, even after a rename or move.
 
-**Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the inspector shows the path. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
+**Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the path appears in a toast over the document. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
 
 An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait.
 
@@ -63,14 +63,15 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 | Action | How |
 |---|---|
 | Open a file | ⌘O, or drop a `.md` file on the window |
-| Comment on a selection | Select text, then press ⌥⌘M. Right-click → **Add Comment** and the toolbar button work too |
+| Comment on a selection | Select text, then press ⌥⌘M. A **Comment ⌥⌘M** button floats by the selection; right-click → **Add Comment** and the **+** in the inspector header work too |
 | Follow an agent's edits | Nothing to do: the open file reloads when it changes on disk, keeping your scroll position |
 | Edit or delete a comment | Type in its card in the inspector, or click the trash icon. Changes save as you make them |
 | Pick up a review later | Reopen the file; its saved comments come back |
-| Jump to a comment or heading | Click it in the inspector or the sidebar |
+| Jump to a comment or heading | Click it in the inspector or the sidebar. **Review → Next / Previous Comment** (⌃⌘↓ / ⌃⌘↑) or the arrows in the inspector header step through the comments |
+| Filter comments | **All / Open / Outdated** in the inspector header, with counts |
 | Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
-| Send to Agent | ⌘↩, or the toolbar button. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; select the path in the inspector to copy it |
-| Review for a waiting agent | The agent runs `mdreview <file>`; comment, then Send to Agent. Every `mdreview` command waiting on that file gets the review |
+| Send to Agent | ⌘↩, or the toolbar button, which shows the comment count. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; the result appears as a toast over the document, where you can select the saved path to copy it |
+| Review for a waiting agent | The agent runs `mdreview <file>`; an **An agent is waiting** line shows in the inspector header and the button reads **Send to Waiting Agent**. Comment, then send. Every `mdreview` command waiting on that file gets the review |
 
 ## Limitations
 

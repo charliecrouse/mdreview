@@ -27,7 +27,14 @@ struct MDReviewApp: App {
                 Button("Add Comment") { model.addComment() }
                     .keyboardShortcut("m", modifiers: [.command, .option])
                     .disabled(!model.canComment)
-                Button("Send to Agent") { model.send() }
+                Button("Next Comment") { model.step(by: 1) }
+                    .keyboardShortcut(.downArrow, modifiers: [.command, .control])
+                    .disabled(model.visibleComments.isEmpty)
+                Button("Previous Comment") { model.step(by: -1) }
+                    .keyboardShortcut(.upArrow, modifiers: [.command, .control])
+                    .disabled(model.visibleComments.isEmpty)
+                Divider()
+                Button(model.agentWaiting ? "Send to Waiting Agent" : "Send to Agent") { model.send() }
                     .keyboardShortcut(.return, modifiers: .command)
                     .disabled(model.comments.isEmpty)
             }

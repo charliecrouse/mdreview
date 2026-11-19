@@ -9,6 +9,7 @@ struct ReaderView: NSViewRepresentable {
     let focused: ReviewComment.ID?
     let scrollTarget: NSRange?
     let onSelect: @MainActor (NSRange) -> Void
+    let onSelectionRect: @MainActor (CGRect?) -> Void
     let onComment: @MainActor () -> Void
     let onScrolled: @MainActor @Sendable () -> Void
 
@@ -33,6 +34,10 @@ struct ReaderView: NSViewRepresentable {
         scrollView.hasVerticalScroller = true
         scrollView.drawsBackground = false
         context.coordinator.textView = textView
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            context.coordinator, selector: #selector(Coordinator.moved), name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView)
         return scrollView
     }
 
@@ -68,6 +73,14 @@ struct ReaderView: NSViewRepresentable {
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let textView else { return }
             parent?.onSelect(textView.selectedRange())
+            moved()
+        }
+
+        /// Reports where the selection sits in the reader, for the floating comment button.
+        @objc func moved() {
+            guard let textView = textView as? PaperTextView else { return }
+            let visible = CGRect(origin: .zero, size: textView.visibleRect.size)
+            parent?.onSelectionRect(textView.selectionRect().flatMap { visible.intersects($0) ? $0 : nil })
         }
 
         func textView(_ view: NSTextView, menu: NSMenu, for event: NSEvent, at charIndex: Int) -> NSMenu? {
