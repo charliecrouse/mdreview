@@ -105,6 +105,7 @@ final class ReviewModel {
         guard let comment = ReviewComment(selection: selection, in: rendered.text) else { return }
         comments.append(comment)
         sortComments()
+        if !filter.includes(comment) { filter = .all }
         focusedComment = comment.id
     }
 
