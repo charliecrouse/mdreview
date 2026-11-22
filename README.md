@@ -9,6 +9,7 @@
 
 ## What it does
 
+- **Reads** CommonMark and GitHub Markdown: tables, task lists, strikethrough, footnotes, local images, and YAML front matter as a muted block. Links to other Markdown files open in mdreview.
 - **Comment** on any selection in the rendered view. Each comment is anchored to its source lines, saved as you go and restored when you reopen the file, even after a rename or move. Comment on the whole file with ⇧⌥⌘M or the page icon in the inspector header.
 - **Send to Agent** (⌘↩) turns every comment into one Markdown review (file path, line ranges, quoted text, your note). It's copied to the clipboard and saved in `~/Library/Application Support/mdreview/Reviews/`.
 - **Skip the paste:** an agent runs `mdreview plan.md`, which opens the file and waits like `git commit` waits for its editor. Your review comes back on standard output; closing the window or quitting exits 1. A review sent with no command waiting is queued for the next one.
@@ -83,8 +84,7 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 - Send to Agent is clipboard, file and the `mdreview` command; there are no agent plugins or MCP server. The agent protocol is the command line, and the review is queued only until the next `mdreview <file>` for that file, one review per file.
 - `mdreview reply` doesn't check the id: a reply to an unknown or ambiguous id is dropped without an error.
 - The `mdreview` command runs from the `.app` only, not from `swift run`.
-- Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
-- Inline formatting that spans a soft line break (`**bold` on one line, `text**` on the next) renders literally. The renderer works line by line so every selection maps to exact source lines.
+- Remote images show their alt text, footnotes stay where they're defined, raw HTML shows as source, and Mermaid diagrams show as code.
 - The `.app` is ad-hoc signed for local use: no Developer ID, notarization or DMG.
 
 ## Development
@@ -118,7 +118,8 @@ CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every 
 ## Layout
 
 - `Sources/MDReviewCore/`
-  - `MarkdownRenderer.swift`, `MarkdownRenderer+Inline.swift`: a line-oriented Markdown renderer. It tags every rendered character with the source line it came from.
+  - `MarkdownRenderer.swift`: parses with [swift-markdown](https://github.com/swiftlang/swift-markdown) (CommonMark plus GitHub's extensions) and maps rendered selections back to source lines.
+  - `MarkdownBuilder.swift`, `MarkdownBuilder+Inline.swift`, `MarkdownBuilder+Table.swift`, `MarkdownBuilder+Links.swift`: turn the parsed blocks, inlines, tables, footnotes and bare links into the reader's text, tagging every character with the source line it came from.
   - `RenderedMarkdown.swift`: the renderer's output, its headings and the `.sourceLine` attribute.
   - `ReviewComment.swift`: the comment model.
   - `ReviewComment+Reanchor.swift`: moves a comment to its quoted text after the file changes, or marks it outdated.

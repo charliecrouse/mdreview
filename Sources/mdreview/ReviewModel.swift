@@ -46,7 +46,7 @@ final class ReviewModel {
             if let previous = fileURL, !isOpen(url) { store?.answer(.closed, for: previous) }
             fileURL = url
             self.source = source
-            rendered = MarkdownRenderer.render(source)
+            rendered = MarkdownRenderer.render(source, baseURL: url.deletingLastPathComponent())
             status = nil
             comments = loadComments(for: url).map { $0.reanchored(in: rendered.text) }
             applyReplies()
@@ -90,7 +90,7 @@ final class ReviewModel {
         guard source != self.source else { return }
         self.source = source
         let previous = rendered.text
-        rendered = MarkdownRenderer.render(source)
+        rendered = MarkdownRenderer.render(source, baseURL: url.deletingLastPathComponent())
         selection = NSRange(location: 0, length: 0)
         comments = comments.reanchored(from: previous, to: rendered.text)
         sortComments()
