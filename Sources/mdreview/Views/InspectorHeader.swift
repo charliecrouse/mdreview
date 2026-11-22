@@ -5,12 +5,12 @@ struct InspectorHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if model.agentWaiting {
-                Label("An agent is waiting", systemImage: "circle.fill")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.green)
-                    .accessibilityIdentifier("agentWaiting")
-            }
+            Label("An agent is waiting", systemImage: "circle.fill")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.green)
+                .opacity(model.agentWaiting ? 1 : 0)
+                .accessibilityHidden(!model.agentWaiting)
+                .accessibilityIdentifier("agentWaiting")
             HStack(spacing: 4) {
                 Text("Comments").font(.headline)
                 Spacer()

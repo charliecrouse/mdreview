@@ -146,6 +146,26 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertFalse(anywhere("outdated").exists)
     }
 
+    /// The badge counts open comments, and with every comment resolved there is nothing to send.
+    @MainActor func testSendBadgeCountsOpenCommentsAndDisablesWhenAllResolved() throws {
+        let file = try fixture()
+        let window = launch(file).windows.firstMatch
+        commentOnWholeFile(in: window)
+        let anywhere = { (id: String) in window.descendants(matching: .any)[id].firstMatch }
+        XCTAssertEqual(window.buttons["sendToAgent"].value as? String, "1 open")
+
+        let saved = try send(from: window, for: file)
+        let id = try XCTUnwrap(saved.firstMatch(of: /id ([0-9a-f]{8})/)?.1)
+        try ReviewStore(directory: store(for: file)).appendReply(
+            file: file, id: String(id), text: "Done", resolve: true)
+        DistributedNotificationCenter.default().postNotificationName(
+            ReviewStore.replyNotification, object: nil, userInfo: nil, deliverImmediately: true)
+        XCTAssertTrue(anywhere("agentDone").waitForExistence(timeout: 5))
+        anywhere("resolve").click()
+        XCTAssertTrue(anywhere("resolved").waitForExistence(timeout: 5))
+        XCTAssertFalse(window.buttons["sendToAgent"].isEnabled)
+    }
+
     private func fixture() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

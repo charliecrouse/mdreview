@@ -69,7 +69,7 @@ struct ContentView: View {
             }
             .inspector(isPresented: $showInspector) {
                 CommentsInspector(model: model)
-                    .inspectorColumnWidth(min: 250, ideal: 300, max: 420)
+                    .inspectorColumnWidth(300)
                     .accessibilityIdentifier("inspector")
             }
         }
@@ -83,21 +83,29 @@ struct ContentView: View {
                 Button {
                     model.send()
                 } label: {
-                    Label(
-                        model.agentWaiting ? "Send to Waiting Agent" : "Send to Agent", systemImage: "paperplane.fill"
-                    )
-                    .labelStyle(.titleAndIcon)
-                    if !model.comments.isEmpty {
-                        Text("\(model.comments.count)")
-                            .font(.caption.bold().monospacedDigit())
-                            .padding(.horizontal, 6)
-                            .background(.white.opacity(0.25), in: .capsule)
-                    }
+                    Label("Send to Agent", systemImage: "paperplane.fill")
+                        .labelStyle(.titleAndIcon)
+                    // Always laid out, so the button is the same width at 0, 9 and 99 comments.
+                    Text("\(model.unresolvedCount)")
+                        .font(.caption.bold().monospacedDigit())
+                        .frame(minWidth: 22)
+                        .background(.white.opacity(0.25), in: .capsule)
+                        .opacity(model.unresolvedCount == 0 ? 0 : 1)
                 }
                 .buttonStyle(.glassProminent)
-                .disabled(model.comments.isEmpty)
+                .overlay(alignment: .topTrailing) {
+                    Circle().fill(.green).frame(width: 8, height: 8)
+                        .opacity(model.agentWaiting ? 1 : 0)
+                        .accessibilityHidden(true)
+                        .allowsHitTesting(false)
+                }
+                .disabled(model.unresolvedCount == 0)
                 .accessibilityIdentifier("sendToAgent")
-                .help("Copy the review, save it in mdreview's storage and hand it to a waiting mdreview command (⌘↩)")
+                .accessibilityValue("\(model.unresolvedCount) open")
+                .help(
+                    (model.agentWaiting ? "An agent is waiting. " : "")
+                        + "Copy the review, save it and hand it to a waiting mdreview command (⌘↩)"
+                )
             }
             ToolbarSpacer(.fixed)
             ToolbarItem {
