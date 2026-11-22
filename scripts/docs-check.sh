@@ -46,4 +46,9 @@ for dir in $(find Sources -mindepth 1 -type d); do
     [[ " $mentioned " == *" $dir "* ]] || problem "README Layout doesn't mention $dir/"
 done
 
+# Each journey names the UI test that walks it, so a renamed or deleted test flags the doc.
+for test in $(grep -E '^\*\*Covered by:\*\*' docs/journeys.md | grep -oE 'test[A-Za-z0-9]+'); do
+    grep -q "func $test(" UITests/*.swift || problem "docs/journeys.md names $test, which UITests/ doesn't define"
+done
+
 exit $fail

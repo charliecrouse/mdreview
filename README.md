@@ -15,7 +15,7 @@ Open a `.md` file, select text in the rendered view and comment on it. Each comm
 
 An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait. If you press Send with no command waiting, the review is queued and the next `mdreview plan.md` prints it at once instead of waiting.
 
-The agent can answer each comment. Every comment in the review carries a short `id`, and `mdreview reply plan.md 1a2b3c4d "Renamed to rollout_v2" --resolve` puts the answer under that comment's card. `--resolve` only means the agent thinks it is handled: the card shows an **Agent says done** badge and stays open until you click **Resolve**. You can **Reopen** it or add a follow-up in the note, and the next review carries the agent's earlier reply. Agents learn the whole loop from [skills/mdreview/SKILL.md](skills/mdreview/SKILL.md); in Claude Code the wait should run in the background.
+The agent can answer each comment. Every comment in the review carries a short `id`, and `mdreview reply plan.md 1a2b3c4d "Renamed to rollout_v2" --resolve` puts the answer under that comment's card. `--resolve` only means the agent thinks it is handled: the card shows an **Agent says done** badge and stays open until you click **Resolve**. You can **Reopen** it or add a follow-up in the note, and the next review carries the agent's earlier reply. Agents learn the whole loop from [skills/mdreview/SKILL.md](skills/mdreview/SKILL.md); in Claude Code the wait should run in the background. [docs/journeys.md](docs/journeys.md) walks the main flows step by step.
 
 mdreview never writes into the folder that holds your Markdown. Everything it keeps lives in `~/Library/Application Support/mdreview/`: `Comments/` holds one JSON record per reviewed file, keyed by its path, `Reviews/` holds the sent reviews, and `Handoff/` holds the requests, answers, replies and queued reviews of `mdreview` commands. The command never writes `Comments/`; replies travel through `Handoff/` and the app merges them. A review looks like this:
 
@@ -143,9 +143,10 @@ CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every 
 - `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewCommentTests.swift`, `ReviewExportTests.swift`, `ReviewStoreTests.swift`).
 - `App/`: the app's asset catalog (icon) and `mdreview`, the command-line script the app bundles as a resource. `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
+- `docs/journeys.md`: the main user journeys as flows, each naming the UI test that covers it. `docs/images/` holds the screenshot.
 - `skills/mdreview/SKILL.md`: the agent skill that teaches the review loop.
 - `.github/workflows/ci.yml`: the `check` job, which runs `make check` on GitHub Actions.
-- `scripts/docs-check.sh`: the README freshness check behind `make docs-check`.
+- `scripts/docs-check.sh`: the README freshness check behind `make docs-check`; it also checks that every test named in `docs/journeys.md` exists.
 
 ## License
 
