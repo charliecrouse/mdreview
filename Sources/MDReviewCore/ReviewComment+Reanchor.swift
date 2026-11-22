@@ -10,7 +10,7 @@ extension ReviewComment {
     /// rather than guessing between copies.
     /// An outdated comment stays outdated.
     public func reanchored(in text: NSAttributedString) -> ReviewComment {
-        if isOutdated { return self }
+        if isOutdated || isPage { return self }
         let string = text.string as NSString
         if MarkdownRenderer.quote(of: range, in: text) == quote {
             return anchored(at: range, in: text)
@@ -57,7 +57,7 @@ extension ReviewComment {
     }
 
     fileprivate func reanchored(through diff: LineDiff) -> ReviewComment {
-        if isOutdated { return self }
+        if isOutdated || isPage { return self }
         let (new, oldString, newString) = (diff.new, diff.oldString, diff.newString)
         let (oldLines, newLines, kept) = (diff.oldLines, diff.newLines, diff.kept)
         let first = oldLines.lastIndex { $0.location <= range.location } ?? 0

@@ -100,7 +100,8 @@ struct ReaderView: NSViewRepresentable {
             let all = NSRange(location: 0, length: length)
             layout.removeTemporaryAttribute(.backgroundColor, forCharacterRange: all)
             layout.removeTemporaryAttribute(.underlineStyle, forCharacterRange: all)
-            for comment in comments where !comment.isOutdated && NSMaxRange(comment.range) <= length {
+            for comment in comments where !comment.isOutdated && !comment.isPage && NSMaxRange(comment.range) <= length
+            {
                 layout.addTemporaryAttributes(
                     [
                         .backgroundColor: NSColor.controlAccentColor.withAlphaComponent(

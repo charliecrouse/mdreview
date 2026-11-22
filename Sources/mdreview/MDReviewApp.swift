@@ -27,6 +27,9 @@ struct MDReviewApp: App {
                 Button("Add Comment") { model.addComment() }
                     .keyboardShortcut("m", modifiers: [.command, .option])
                     .disabled(!model.canComment)
+                Button("Add Page Comment") { model.addPageComment() }
+                    .keyboardShortcut("m", modifiers: [.command, .option, .shift])
+                    .disabled(model.fileURL == nil)
                 Button("Next Comment") { model.step(by: 1) }
                     .keyboardShortcut(.downArrow, modifiers: [.command, .control])
                     .disabled(model.visibleComments.isEmpty)

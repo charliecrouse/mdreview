@@ -25,6 +25,9 @@ struct InspectorHeader: View {
                     .disabled(!model.canComment)
                     .help("Comment on the selected text (⌥⌘M)")
                     .accessibilityIdentifier("addComment")
+                Button("Add Page Comment", systemImage: "doc.text") { model.addPageComment() }
+                    .help("Comment on the whole file (⇧⌥⌘M)")
+                    .accessibilityIdentifier("addPageComment")
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)

@@ -9,7 +9,7 @@
 
 ## What it does
 
-Open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers, so an agent knows exactly where to look. Comments are saved as you go and come back when you reopen the file, even after a rename or move.
+Open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers, so an agent knows exactly where to look. A comment can also be about the whole file: press ⇧⌥⌘M or click the page icon in the inspector header. Comments are saved as you go and come back when you reopen the file, even after a rename or move.
 
 **Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the path appears in a toast over the document. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
 
@@ -69,6 +69,7 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 | Comment on a selection | Select text, then press ⌥⌘M. A **Comment ⌥⌘M** button floats by the selection; right-click → **Add Comment** and the **+** in the inspector header work too |
 | Follow an agent's edits | Nothing to do: the open file reloads when it changes on disk, keeping your scroll position |
 | Edit or delete a comment | Type in its card in the inspector, or click the trash icon. Changes save as you make them |
+| Comment on the whole file | ⇧⌥⌘M, **Review → Add Page Comment** or the page icon in the inspector header. It shows as **Page** in the inspector, is exported as `file.md (whole file)` with no line range or quote, and is never outdated. Replies, Resolve / Reopen, filters and Send work as for any comment |
 | Pick up a review later | Reopen the file; its saved comments come back |
 | Jump to a comment or heading | Click it in the inspector or the sidebar. **Review → Next / Previous Comment** (⌃⌘↓ / ⌃⌘↑) or the arrows in the inspector header step through the comments |
 | Confirm or reopen an agent's answer | A reply from `mdreview reply` shows under the comment. **Resolve** closes it (Open filter and the next send skip it); **Reopen** brings it back |
@@ -108,7 +109,7 @@ On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Home
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
-| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send; then show an agent reply with its badge and resolve it |
+| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send; then show an agent reply with its badge and resolve it; then add a page comment, send it and resolve it |
 
 Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 
