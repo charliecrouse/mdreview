@@ -13,7 +13,7 @@ struct CommentsInspector: View {
                     systemImage: "text.bubble",
                     description: Text(
                         model.comments.isEmpty
-                            ? "Select text in the document, then press ⌥⌘M or right-click → Add Comment."
+                            ? "Select text and press ⌥⌘M, or press ⇧⌥⌘M to comment on the whole file."
                             : "Choose another filter above."))
             } else {
                 ScrollView {

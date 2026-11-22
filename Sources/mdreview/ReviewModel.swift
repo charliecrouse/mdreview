@@ -110,6 +110,14 @@ final class ReviewModel {
         focusedComment = comment.id
     }
 
+    func addPageComment() {
+        let comment = ReviewComment.page()
+        comments.append(comment)
+        sortComments()
+        if !filter.includes(comment) { filter = .all }
+        focusedComment = comment.id
+    }
+
     private func sortComments() {
         comments.sort { ($0.lines.lowerBound, $0.range.location) < ($1.lines.lowerBound, $1.range.location) }
     }
@@ -134,7 +142,7 @@ final class ReviewModel {
 
     func reveal(_ comment: ReviewComment) {
         focusedComment = comment.id
-        if !comment.isOutdated { scrollTarget = comment.range }
+        if !comment.isOutdated && !comment.isPage { scrollTarget = comment.range }
     }
 
     /// Moves focus `offset` comments along the visible list, wrapping at the ends.

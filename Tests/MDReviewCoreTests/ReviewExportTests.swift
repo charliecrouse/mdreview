@@ -35,3 +35,13 @@ import Testing
     #expect(review.contains("Still?\n\nYour earlier reply: Renamed it\n"))
     #expect(answered.shortID.count == 8 && answered.id.uuidString.lowercased().hasPrefix(answered.shortID))
 }
+
+@Test func reviewExportMarksPageCommentsAsWholeFileWithoutLinesOrQuote() {
+    let page = ReviewComment.page(text: "Needs a rollback section.")
+    let anchored = ReviewComment(lines: 3...3, quote: "Backfill", text: "Which?", range: NSRange())
+    let review = ReviewExport.markdown(file: URL(fileURLWithPath: "/tmp/plan.md"), comments: [anchored, page])
+
+    #expect(review.contains("## 1. plan.md (whole file) · id \(page.shortID)\n\nNeeds a rollback section.\n"))
+    #expect(review.contains("## 2. plan.md:3 · id \(anchored.shortID)\n\n> Backfill\n\nWhich?\n"))
+    #expect(review.contains("A comment marked (whole file) is about the file as a whole"))
+}

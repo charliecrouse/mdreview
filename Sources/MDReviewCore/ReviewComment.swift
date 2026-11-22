@@ -21,9 +21,11 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     public var agentSaysDone = false
     /// The reviewer confirmed the comment is handled.
     public var isResolved = false
+    /// About the whole file, not a selection: no quote, lines or range, and never outdated.
+    public var isPage = false
 
     private enum CodingKeys: String, CodingKey {
-        case id, lines, quote, text, range, isOutdated, prefix, suffix, agentReply, agentSaysDone, isResolved
+        case id, lines, quote, text, range, isOutdated, prefix, suffix, agentReply, agentSaysDone, isResolved, isPage
     }
 
     public init(id: UUID = UUID(), lines: ClosedRange<Int>, quote: String, text: String = "", range: NSRange) {
@@ -32,6 +34,13 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
         self.quote = quote
         self.text = text
         self.range = range
+    }
+
+    /// A comment about the whole file. Its zero lines sort it ahead of every anchored comment.
+    public static func page(text: String = "") -> ReviewComment {
+        var comment = ReviewComment(lines: 0...0, quote: "", text: text, range: NSRange())
+        comment.isPage = true
+        return comment
     }
 
     /// A comment on the rendered `selection`, or nil when it covers no source line or only whitespace.
@@ -59,6 +68,7 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
         agentReply = try values.decodeIfPresent(String.self, forKey: .agentReply)
         agentSaysDone = try values.decodeIfPresent(Bool.self, forKey: .agentSaysDone) ?? false
         isResolved = try values.decodeIfPresent(Bool.self, forKey: .isResolved) ?? false
+        isPage = try values.decodeIfPresent(Bool.self, forKey: .isPage) ?? false
     }
 
     /// The id an export prints and `mdreview reply` takes: the first 8 hex digits of `id`.

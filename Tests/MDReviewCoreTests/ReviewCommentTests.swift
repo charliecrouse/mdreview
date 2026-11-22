@@ -197,3 +197,15 @@ private let repeated = "Please ship it today, and then after that ship it again 
     let decoded = try JSONDecoder().decode(ReviewComment.self, from: JSONEncoder().encode(list[0]))
     #expect(decoded == list[0])
 }
+
+@Test func pageCommentsSurviveReanchoringAndReload() throws {
+    let page = ReviewComment.page(text: "Overall: too long.")
+    let old = NSAttributedString(string: "one\ntwo")
+    let new = NSAttributedString(string: "rewritten entirely")
+
+    #expect([page].reanchored(from: old, to: new) == [page])
+    #expect(page.reanchored(in: new) == page)
+    #expect(!page.reanchored(in: new).isOutdated)
+    let decoded = try JSONDecoder().decode(ReviewComment.self, from: JSONEncoder().encode(page))
+    #expect(decoded.isPage && decoded == page)
+}

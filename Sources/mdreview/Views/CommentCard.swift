@@ -15,7 +15,7 @@ struct CommentCard: View {
             HStack(spacing: 6) {
                 Text("\(number)").font(.caption2.bold()).foregroundStyle(.white)
                     .frame(width: 18, height: 18).background(Circle().fill(.tint))
-                Text("Line\(comment.lines.count == 1 ? "" : "s") \(comment.lineLabel)")
+                Text(comment.isPage ? "Page" : "Line\(comment.lines.count == 1 ? "" : "s") \(comment.lineLabel)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                 if comment.isOutdated {
@@ -44,15 +44,18 @@ struct CommentCard: View {
                 .buttonStyle(.borderless)
                 .help("Delete comment")
             }
-            Text(comment.quote)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-                .padding(.leading, 8)
-                .strikethrough(comment.isOutdated)
-                .overlay(alignment: .leading) {
-                    Rectangle().fill(comment.isOutdated ? AnyShapeStyle(.orange) : AnyShapeStyle(.tint)).frame(width: 2)
-                }
+            if !comment.isPage {
+                Text(comment.quote)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .padding(.leading, 8)
+                    .strikethrough(comment.isOutdated)
+                    .overlay(alignment: .leading) {
+                        Rectangle().fill(comment.isOutdated ? AnyShapeStyle(.orange) : AnyShapeStyle(.tint)).frame(
+                            width: 2)
+                    }
+            }
             TextField("Add a comment…", text: $comment.text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...10)

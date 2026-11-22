@@ -107,6 +107,34 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertTrue(anywhere("reopen").exists)
     }
 
+    /// A page comment has no selection: it exports as the whole file, takes an agent reply and resolves.
+    @MainActor func testPageCommentExportsRepliesAndResolves() throws {
+        let file = try fixture()
+        let window = launch(file).windows.firstMatch
+        XCTAssertTrue(window.textViews["reader"].waitForExistence(timeout: 10))
+        window.typeKey("m", modifierFlags: [.command, .option, .shift])
+        let field = window.descendants(matching: .any)["commentField"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.click()
+        field.typeText("Add a rollback plan.")
+
+        let saved = try send(from: window, for: file)
+        XCTAssertTrue(saved.contains("## 1. fixture.md (whole file) · id"), saved)
+        XCTAssertTrue(saved.contains("Add a rollback plan."), saved)
+        XCTAssertFalse(saved.contains("\n> "), saved)
+        let id = try XCTUnwrap(saved.firstMatch(of: /id ([0-9a-f]{8})/)?.1)
+
+        try ReviewStore(directory: store(for: file)).appendReply(
+            file: file, id: String(id), text: "Added one", resolve: true)
+        DistributedNotificationCenter.default().postNotificationName(
+            ReviewStore.replyNotification, object: nil, userInfo: nil, deliverImmediately: true)
+        let anywhere = { (id: String) in window.descendants(matching: .any)[id].firstMatch }
+        XCTAssertTrue(anywhere("agentDone").waitForExistence(timeout: 5))
+        anywhere("resolve").click()
+        XCTAssertTrue(anywhere("resolved").waitForExistence(timeout: 5))
+        XCTAssertFalse(anywhere("outdated").exists)
+    }
+
     private func fixture() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
