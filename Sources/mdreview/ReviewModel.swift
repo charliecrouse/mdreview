@@ -160,6 +160,9 @@ final class ReviewModel {
         }
     }
 
+    /// What Send exports: resolved comments are closed and stay out of the review.
+    var unresolvedCount: Int { comments.count { !$0.isResolved } }
+
     /// Copies the batched review to the clipboard, saves it in the app's storage and hands it to any
     /// `mdreview <file>` command waiting for it.
     func send() {

@@ -39,7 +39,7 @@ struct MDReviewApp: App {
                 Divider()
                 Button(model.agentWaiting ? "Send to Waiting Agent" : "Send to Agent") { model.send() }
                     .keyboardShortcut(.return, modifiers: .command)
-                    .disabled(model.comments.isEmpty)
+                    .disabled(model.unresolvedCount == 0)
             }
         }
     }

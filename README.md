@@ -72,8 +72,8 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 | Confirm or reopen an agent's answer | A reply from `mdreview reply` shows under the comment. **Resolve** closes it (Open filter and the next send skip it); **Reopen** brings it back |
 | Filter comments | **All / Open / Outdated** in the inspector header, with counts. Resolved comments count as closed |
 | Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
-| Send to Agent | ⌘↩, or the toolbar button, which shows the comment count. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; the result appears as a toast over the document, where you can select the saved path to copy it |
-| Review for a waiting agent | The agent runs `mdreview <file>`; an **An agent is waiting** line shows in the inspector header and the button reads **Send to Waiting Agent**. Comment, then send. Every `mdreview` command waiting on that file gets the review; with none waiting, the review is queued for the next one |
+| Send to Agent | ⌘↩, or the toolbar button, which shows the count of open comments (resolved ones are not sent) and stays disabled when there are none. The button is the same width in every state. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; the result appears as a toast over the document, where you can select the saved path to copy it |
+| Review for a waiting agent | The agent runs `mdreview <file>`; an **An agent is waiting** line shows in the inspector header and a green dot appears on the toolbar button. Comment, then send. Every `mdreview` command waiting on that file gets the review; with none waiting, the review is queued for the next one |
 
 ## Limitations
 
