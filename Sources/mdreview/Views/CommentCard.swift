@@ -8,6 +8,7 @@ struct CommentCard: View {
     var focusedField: FocusState<ReviewComment.ID?>.Binding
     let onSelect: () -> Void
     let onDelete: () -> Void
+    let onResolve: (Bool) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -28,6 +29,13 @@ struct CommentCard: View {
                             "The quoted text was rewritten or removed, so the line numbers are from an earlier version"
                         )
                         .accessibilityIdentifier("outdated")
+                }
+                if comment.isResolved {
+                    badge("Resolved", id: "resolved", color: .green, help: "You confirmed this comment is handled")
+                } else if comment.agentSaysDone {
+                    badge(
+                        "Agent says done", id: "agentDone", color: .blue,
+                        help: "The agent says it handled this; confirm below")
                 }
                 Spacer()
                 Button(role: .destructive, action: onDelete) {
@@ -50,6 +58,18 @@ struct CommentCard: View {
                 .lineLimit(1...10)
                 .focused(focusedField, equals: comment.id)
                 .accessibilityIdentifier("commentField")
+            if let reply = comment.agentReply {
+                Text(reply)
+                    .font(.callout)
+                    .padding(.leading, 8)
+                    .overlay(alignment: .leading) { Rectangle().fill(.blue).frame(width: 2) }
+                    .accessibilityIdentifier("agentReply")
+            }
+            if comment.isResolved {
+                Button("Reopen") { onResolve(false) }.buttonStyle(.link).accessibilityIdentifier("reopen")
+            } else if comment.agentSaysDone {
+                Button("Resolve") { onResolve(true) }.buttonStyle(.link).accessibilityIdentifier("resolve")
+            }
         }
         .padding(10)
         .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 10))
@@ -60,5 +80,16 @@ struct CommentCard: View {
         .contentShape(.rect)
         .onTapGesture(perform: onSelect)
         .accessibilityAddTraits(.isButton)
+    }
+
+    private func badge(_ title: String, id: String, color: Color, help: String) -> some View {
+        Text(title)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(color.opacity(0.15), in: .capsule)
+            .help(help)
+            .accessibilityIdentifier(id)
     }
 }

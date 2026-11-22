@@ -5,14 +5,20 @@ import MDReviewCore
 /// prints the review once the user sends it. Exits 1 if the file is closed, or the app quits, unsent.
 enum WaitCommand {
     static func run(_ args: [String]) -> Never {
+        if args.first == "reply" { ReplyCommand.run(Array(args.dropFirst())) }
         guard args.count == 1, let path = args.first, !path.hasPrefix("-") else {
-            fail("usage: mdreview <file.md>", status: 2)
+            fail("usage: mdreview <file.md> | mdreview reply <file.md> <id> <text> [--resolve]", status: 2)
         }
         let file = URL(fileURLWithPath: path).standardizedFileURL
         guard FileManager.default.isReadableFile(atPath: file.path) else { fail("can't read \(path)") }
         let app = Bundle.main.bundleURL
         guard app.pathExtension == "app" else { fail("run the mdreview script inside mdreview.app") }
         guard let store = ReviewModel.makeStore() else { fail("no Application Support folder to hand off through") }
+        // A review sent while no command waited is handed over at once.
+        if let review = store.takePending(for: file) {
+            print(review, terminator: "")
+            exit(0)
+        }
         let id: String
         do {
             id = try store.request(file)

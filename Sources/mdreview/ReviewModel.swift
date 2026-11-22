@@ -49,6 +49,7 @@ final class ReviewModel {
             rendered = MarkdownRenderer.render(source)
             status = nil
             comments = loadComments(for: url).map { $0.reanchored(in: rendered.text) }
+            applyReplies()
             sortComments()
             selection = NSRange(location: 0, length: 0)
             focusedComment = nil
@@ -113,6 +114,19 @@ final class ReviewModel {
         comments.sort { ($0.lines.lowerBound, $0.range.location) < ($1.lines.lowerBound, $1.range.location) }
     }
 
+    /// Merges replies the `mdreview reply` command left for the open file into their comments.
+    func applyReplies() {
+        guard let url = fileURL, let replies = store?.takeReplies(for: url), !replies.isEmpty else { return }
+        comments.apply(replies)
+    }
+
+    /// The reviewer's call on whether the comment is handled; an agent's reply alone never closes it.
+    func setResolved(_ resolved: Bool, for id: ReviewComment.ID) {
+        guard let index = comments.firstIndex(where: { $0.id == id }) else { return }
+        comments[index].isResolved = resolved
+        if !resolved { comments[index].agentSaysDone = false }
+    }
+
     func delete(_ id: ReviewComment.ID) {
         comments.removeAll { $0.id == id }
         if focusedComment == id { focusedComment = nil }
@@ -141,15 +155,20 @@ final class ReviewModel {
     /// Copies the batched review to the clipboard, saves it in the app's storage and hands it to any
     /// `mdreview <file>` command waiting for it.
     func send() {
-        guard let url = fileURL, !comments.isEmpty else { return }
-        let review = ReviewExport.markdown(file: url, comments: comments)
+        let open = comments.filter { !$0.isResolved }
+        guard let url = fileURL, !open.isEmpty else { return }
+        let review = ReviewExport.markdown(file: url, comments: open)
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(review, forType: .string)
-        let handedOff = (store?.answer(.review(review), for: url) ?? 0) > 0
+        let handedOff = store?.deliver(review, for: url)
         refreshAgentWaiting()
-        let copied =
-            "\(handedOff ? "Sent to the waiting command and copied" : "Copied") "
-            + "\(comments.count) comment\(comments.count == 1 ? "" : "s")"
+        let lead =
+            switch handedOff {
+            case true: "Sent to the waiting command and copied"
+            case false: "Queued for the next mdreview command and copied"
+            case nil: "Copied"
+            }
+        let copied = "\(lead) \(open.count) comment\(open.count == 1 ? "" : "s")"
         guard let store else {
             status = copied
             return

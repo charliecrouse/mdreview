@@ -13,23 +13,26 @@ Open a `.md` file, select text in the rendered view and comment on it. Each comm
 
 **Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the path appears in a toast over the document. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
 
-An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait.
+An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait. If you press Send with no command waiting, the review is queued and the next `mdreview plan.md` prints it at once instead of waiting.
 
-mdreview never writes into the folder that holds your Markdown. Everything it keeps lives in `~/Library/Application Support/mdreview/`: `Comments/` holds one JSON record per reviewed file, keyed by its path, `Reviews/` holds the sent reviews, and `Handoff/` holds the requests and answers of `mdreview` commands while they wait. A review looks like this:
+The agent can answer each comment. Every comment in the review carries a short `id`, and `mdreview reply plan.md 1a2b3c4d "Renamed to rollout_v2" --resolve` puts the answer under that comment's card. `--resolve` only means the agent thinks it is handled: the card shows an **Agent says done** badge and stays open until you click **Resolve**. You can **Reopen** it or add a follow-up in the note, and the next review carries the agent's earlier reply. Agents learn the whole loop from [skills/mdreview/SKILL.md](skills/mdreview/SKILL.md); in Claude Code the wait should run in the background.
+
+mdreview never writes into the folder that holds your Markdown. Everything it keeps lives in `~/Library/Application Support/mdreview/`: `Comments/` holds one JSON record per reviewed file, keyed by its path, `Reviews/` holds the sent reviews, and `Handoff/` holds the requests, answers, replies and queued reviews of `mdreview` commands. The command never writes `Comments/`; replies travel through `Handoff/` and the app merges them. A review looks like this:
 
 ```markdown
 # Review of plan.md
 
 File: `/path/to/plan.md`
-Comments: 2. Line numbers refer to the file above. Address each comment.
+Comments: 2. Line numbers refer to the file above. Address each comment, then answer it with
+`mdreview reply <file> <id> "<what you did>" --resolve`.
 
-## 1. plan.md:3-4
+## 1. plan.md:3-4 · id 1a2b3c4d
 
 > feature flag and enable
 
 Name the actual flag.
 
-## 2. plan.md:16
+## 2. plan.md:16 · id 5e6f7a8b
 
 > Flip the default after one week
 
@@ -68,10 +71,11 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 | Edit or delete a comment | Type in its card in the inspector, or click the trash icon. Changes save as you make them |
 | Pick up a review later | Reopen the file; its saved comments come back |
 | Jump to a comment or heading | Click it in the inspector or the sidebar. **Review → Next / Previous Comment** (⌃⌘↓ / ⌃⌘↑) or the arrows in the inspector header step through the comments |
-| Filter comments | **All / Open / Outdated** in the inspector header, with counts |
+| Confirm or reopen an agent's answer | A reply from `mdreview reply` shows under the comment. **Resolve** closes it (Open filter and the next send skip it); **Reopen** brings it back |
+| Filter comments | **All / Open / Outdated** in the inspector header, with counts. Resolved comments count as closed |
 | Show or hide the sidebar or comments | **View** menu, or the toolbar buttons |
 | Send to Agent | ⌘↩, or the toolbar button, which shows the comment count. Overwrites the file's review in `~/Library/Application Support/mdreview/Reviews/` on each send; the result appears as a toast over the document, where you can select the saved path to copy it |
-| Review for a waiting agent | The agent runs `mdreview <file>`; an **An agent is waiting** line shows in the inspector header and the button reads **Send to Waiting Agent**. Comment, then send. Every `mdreview` command waiting on that file gets the review |
+| Review for a waiting agent | The agent runs `mdreview <file>`; an **An agent is waiting** line shows in the inspector header and the button reads **Send to Waiting Agent**. Comment, then send. Every `mdreview` command waiting on that file gets the review; with none waiting, the review is queued for the next one |
 
 ## Limitations
 
@@ -79,7 +83,8 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 - Records for files you delete stay in `~/Library/Application Support/mdreview/` until you remove them.
 - One file at a time, and the Markdown is read-only.
 - A comment follows its quoted text as rendered, and remembers about 30 characters on each side of it to tell repeated phrases apart. While the file is open, each change is compared line by line, so a comment whose lines are unchanged shifts with them, however many other places one write edits. When an edit touches its lines, it follows its quote only if exactly one copy is left in the changed lines, both before and after the edit, counting only copies with the same surrounding text when the changed lines held several; otherwise it is marked outdated rather than moved to another copy. On reopen, a comment whose quote moved follows it only when exactly one copy is left the same way and that copy keeps the text on at least one side of it; otherwise it is marked outdated, even if the quote just moved into a new sentence. An outdated comment keeps the line numbers of the earlier version and stays outdated, across edits and reopens, until you delete it.
-- Send to Agent is clipboard, file and the `mdreview` command; there are no agent plugins or MCP server.
+- Send to Agent is clipboard, file and the `mdreview` command; there are no agent plugins or MCP server. The agent protocol is the command line, and the review is queued only until the next `mdreview <file>` for that file, one review per file.
+- `mdreview reply` doesn't check the id: a reply to an unknown or ambiguous id is dropped without an error.
 - The `mdreview` command runs from the `.app` only, not from `swift run`.
 - Tables render as simple tab-aligned rows (no borders, fixed 200 pt columns).
 - Inline formatting that spans a soft line break (`**bold` on one line, `text**` on the next) renders literally. The renderer works line by line so every selection maps to exact source lines.
@@ -103,7 +108,7 @@ On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Home
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
-| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send |
+| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send; then show an agent reply with its badge and resolve it |
 
 Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 
@@ -122,11 +127,14 @@ CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every 
   - `ReviewComment+Reanchor.swift`: moves a comment to its quoted text after the file changes, or marks it outdated.
   - `ReviewExport.swift`: the batched review an agent receives.
   - `ReviewStore.swift`: saved comments and sent reviews, kept in the app's Application Support folder.
+  - `ReviewComment+Reply.swift`: merges agent replies into comments by short id.
   - `ReviewStore+Handoff.swift`: the request and answer files behind the `mdreview` command.
+  - `ReviewStore+Replies.swift`: reply files and the review queued while no command waits.
 - `Sources/mdreview/`: the SwiftUI app.
   - `Main.swift`: starts the app, or the `mdreview` command when the bundled script passes `--wait`.
   - `MDReviewApp.swift`, `AppDelegate.swift`: the scene, menu commands, command-line file argument and opening files an `mdreview` command asks for.
   - `WaitCommand.swift`: the `mdreview <file>` command: opens the file in the app and waits for the review.
+  - `ReplyCommand.swift`: `mdreview reply`, which leaves an agent's answer to one comment.
   - `ReviewModel.swift`: the open file, its comments (loaded and saved through the store), live reload and Send to Agent.
   - `FileWatcher.swift`: watches the open file, including atomic saves, deletion and recreation.
   - `Views/`: the split view with a glass sidebar (outline and comments) and the comment inspector.
@@ -134,6 +142,7 @@ CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every 
 - `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewCommentTests.swift`, `ReviewExportTests.swift`, `ReviewStoreTests.swift`).
 - `App/`: the app's asset catalog (icon) and `mdreview`, the command-line script the app bundles as a resource. `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
+- `skills/mdreview/SKILL.md`: the agent skill that teaches the review loop.
 - `.github/workflows/ci.yml`: the `check` job, which runs `make check` on GitHub Actions.
 - `scripts/docs-check.sh`: the README freshness check behind `make docs-check`.
 

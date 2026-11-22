@@ -6,6 +6,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = ReviewModel()
     // periphery:ignore - held for the app's lifetime; nothing removes the observer
     private var handoffObserver: (any NSObjectProtocol)?
+    // periphery:ignore - held for the app's lifetime; nothing removes the observer
+    private var replyObserver: (any NSObjectProtocol)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Needed when launched as a bare executable (`swift run`) rather than an .app bundle.
@@ -15,6 +17,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forName: ReviewStore.handoffNotification, object: nil, queue: .main
         ) { [model] _ in
             MainActor.assumeIsolated { model.openRequestedFile() }
+        }
+        replyObserver = DistributedNotificationCenter.default().addObserver(
+            forName: ReviewStore.replyNotification, object: nil, queue: .main
+        ) { [model] _ in
+            MainActor.assumeIsolated { model.applyReplies() }
         }
         // `swift run mdreview path/to/file.md`; skip `-Key value` defaults pairs.
         var args = CommandLine.arguments.dropFirst()

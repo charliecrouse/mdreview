@@ -10,7 +10,7 @@ enum CommentFilter: String, CaseIterable, Identifiable {
     func includes(_ comment: ReviewComment) -> Bool {
         switch self {
         case .all: true
-        case .open: !comment.isOutdated
+        case .open: !comment.isOutdated && !comment.isResolved
         case .outdated: comment.isOutdated
         }
     }

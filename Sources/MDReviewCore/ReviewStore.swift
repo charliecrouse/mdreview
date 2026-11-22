@@ -101,7 +101,7 @@ public struct ReviewStore: Sendable {
         file.standardizedFileURL.resolvingSymlinksInPath().path
     }
 
-    private static func hash(for file: URL) -> String {
+    static func hash(for file: URL) -> String {
         SHA256.hash(data: Data(key(for: file).utf8)).map { String(format: "%02x", $0) }.joined()
     }
 }

@@ -8,7 +8,8 @@ public enum ReviewExport {
             # Review of \(name)
 
             File: `\(file.path)`
-            Comments: \(comments.count). Line numbers refer to the file above. Address each comment.
+            Comments: \(comments.count). Line numbers refer to the file above. Address each comment, then answer it with
+            `mdreview reply <file> <id> "<what you did>" --resolve`.
 
             """
         if comments.contains(where: \.isOutdated) {
@@ -21,7 +22,10 @@ public enum ReviewExport {
             let body = comment.text.trimmingCharacters(in: .whitespacesAndNewlines)
             let text = body.isEmpty ? "_(no comment)_" : body
             let outdated = comment.isOutdated ? " (outdated)" : ""
-            out += "\n## \(index + 1). \(name):\(comment.lineLabel)\(outdated)\n\n\(quote)\n\n\(text)\n"
+            let reply = comment.agentReply.map { "\nYour earlier reply: \($0)\n" } ?? ""
+            out +=
+                "\n## \(index + 1). \(name):\(comment.lineLabel) · id \(comment.shortID)\(outdated)"
+                + "\n\n\(quote)\n\n\(text)\n\(reply)"
         }
         return out
     }
