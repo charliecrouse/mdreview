@@ -28,8 +28,13 @@ extension ReviewStore {
         try FileManager.default.createDirectory(at: handoffFolder, withIntermediateDirectories: true)
         let body = ReplyFile(path: Self.key(for: file), reply: Reply(id: id, text: text, resolve: resolve))
         try JSONEncoder().encode(body).write(
-            to: handoffFolder.appending(path: "\(Self.hash(for: file))-\(UUID().uuidString).reply"),
+            to: handoffFolder.appending(
+                path: "\(Self.hash(for: file))-\(Self.replyStamp())-\(UUID().uuidString).reply"),
             options: .atomic)
+    }
+
+    private static func replyStamp() -> String {
+        String(format: "%020llu", UInt64(Date().timeIntervalSince1970 * 1_000_000))
     }
 
     /// The replies waiting for `file`, oldest first. Taking them deletes them.
@@ -37,14 +42,15 @@ extension ReviewStore {
         let key = Self.key(for: file)
         let urls =
             (try? FileManager.default.contentsOfDirectory(at: handoffFolder, includingPropertiesForKeys: nil)) ?? []
-        return urls.filter { $0.pathExtension == "reply" }.compactMap { url -> Reply? in
-            guard let data = try? Data(contentsOf: url),
-                let body = try? JSONDecoder().decode(ReplyFile.self, from: data)
-            else { return nil }
-            guard body.path == key else { return nil }
-            try? FileManager.default.removeItem(at: url)
-            return body.reply
-        }
+        return urls.filter { $0.pathExtension == "reply" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .compactMap { url -> Reply? in
+                guard let data = try? Data(contentsOf: url),
+                    let body = try? JSONDecoder().decode(ReplyFile.self, from: data)
+                else { return nil }
+                guard body.path == key else { return nil }
+                try? FileManager.default.removeItem(at: url)
+                return body.reply
+            }
     }
 
     private func pendingURL(for file: URL) -> URL {
