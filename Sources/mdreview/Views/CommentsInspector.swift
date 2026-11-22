@@ -26,7 +26,8 @@ struct CommentsInspector: View {
                                     isFocused: model.focusedComment == comment.id,
                                     focusedField: $focusedField,
                                     onSelect: { model.reveal(comment) },
-                                    onDelete: { model.delete(comment.id) }
+                                    onDelete: { model.delete(comment.id) },
+                                    onResolve: { model.setResolved($0, for: comment.id) }
                                 )
                             }
                         }

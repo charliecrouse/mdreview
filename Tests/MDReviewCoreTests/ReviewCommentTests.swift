@@ -180,3 +180,20 @@ private let repeated = "Please ship it today, and then after that ship it again 
     #expect(decoded.lines == 3...3 && decoded.quote == "Ship it." && decoded.range == NSRange(location: 6, length: 8))
     #expect(!decoded.isOutdated && decoded.prefix.isEmpty && decoded.suffix.isEmpty)
 }
+
+@Test func repliesProposeHandledWithoutResolvingAndStaleIDsAreIgnored() throws {
+    var list = [try comment(on: "Ship it", in: "Ship it.\n"), try comment(on: "Ship", in: "Ship it.\n")]
+    let target = list[0].shortID
+    list.apply([
+        .init(id: target.uppercased(), text: "Done", resolve: true),
+        .init(id: "zzzzzzzz", text: "Stale", resolve: true),
+        .init(id: "", text: "Everything", resolve: true),
+    ])
+    #expect(list[0].agentReply == "Done" && list[0].agentSaysDone && !list[0].isResolved)
+    #expect(list[1].agentReply == nil)
+    list.apply([.init(id: target, text: "Not yet", resolve: false)])
+    #expect(list[0].agentReply == "Not yet" && !list[0].agentSaysDone)
+
+    let decoded = try JSONDecoder().decode(ReviewComment.self, from: JSONEncoder().encode(list[0]))
+    #expect(decoded == list[0])
+}

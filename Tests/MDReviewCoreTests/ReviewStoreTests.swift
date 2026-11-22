@@ -140,3 +140,35 @@ private let comments = [
     store.answer(.closed, for: file)
     #expect(!store.isWaiting(for: file))
 }
+
+@Test func repliesRoundTripPerFileAndAreTakenOnce() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let other = root.appending(path: "other.md")
+
+    try store.appendReply(file: file, id: "1a2b3c4d", text: "Renamed", resolve: true)
+    try store.appendReply(file: other, id: "ffffffff", text: "Elsewhere", resolve: false)
+    #expect(store.takeReplies(for: file) == [.init(id: "1a2b3c4d", text: "Renamed", resolve: true)])
+    #expect(store.takeReplies(for: file).isEmpty)
+    #expect(store.takeReplies(for: other).count == 1)
+    #expect(!FileManager.default.fileExists(atPath: root.appending(path: "store/Comments").path))
+}
+
+@Test func aReviewSentWithNoWaitingCommandIsQueuedForTheNextOne() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    #expect(store.takePending(for: file) == nil)
+    #expect(!store.deliver("# First", for: file))
+    #expect(!store.deliver("# Second", for: file))
+    #expect(store.takePending(for: file) == "# Second")
+    #expect(store.takePending(for: file) == nil)
+
+    #expect(!store.deliver("# Stale", for: file))
+    let id = try store.request(file)
+    #expect(store.deliver("# Live", for: file))
+    #expect(store.takeAnswer(for: id) == .review("# Live"))
+    #expect(store.takePending(for: file) == nil)
+}

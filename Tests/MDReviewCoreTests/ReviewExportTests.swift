@@ -11,8 +11,10 @@ import Testing
     let review = ReviewExport.markdown(file: file, comments: comments)
 
     #expect(review.contains("File: `/tmp/notes/plan.md`"))
-    #expect(review.contains("## 1. plan.md:3-4\n\n> feature flag\n> and enable\n\nName the flag.\n"))
-    #expect(review.contains("## 2. plan.md:9\n\n> Backfill\n\nWhich workspaces?\n"))
+    #expect(
+        review.contains(
+            "## 1. plan.md:3-4 · id \(comments[1].shortID)\n\n> feature flag\n> and enable\n\nName the flag.\n"))
+    #expect(review.contains("## 2. plan.md:9 · id \(comments[0].shortID)\n\n> Backfill\n\nWhich workspaces?\n"))
 }
 
 @Test func reviewExportLabelsOutdatedComments() {
@@ -23,5 +25,13 @@ import Testing
 
     #expect(!fresh.contains("Outdated"))
     #expect(review.contains("Outdated comments quote text the file no longer contains"))
-    #expect(review.contains("## 1. plan.md:2 (outdated)\n\n> Old text\n\nStill relevant?\n"))
+    #expect(review.contains("## 1. plan.md:2 · id \(outdated.shortID) (outdated)\n\n> Old text\n\nStill relevant?\n"))
+}
+
+@Test func reviewExportShowsTheAgentsEarlierReply() {
+    var answered = ReviewComment(lines: 2...2, quote: "Old", text: "Still?", range: NSRange())
+    answered.agentReply = "Renamed it"
+    let review = ReviewExport.markdown(file: URL(fileURLWithPath: "/tmp/plan.md"), comments: [answered])
+    #expect(review.contains("Still?\n\nYour earlier reply: Renamed it\n"))
+    #expect(answered.shortID.count == 8 && answered.id.uuidString.lowercased().hasPrefix(answered.shortID))
 }

@@ -15,8 +15,16 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     /// Rendered text just before and after the quote, which tells one copy of a repeated quote from another.
     public var prefix = ""
     public var suffix = ""
+    /// What the agent answered with `mdreview reply`.
+    public var agentReply: String?
+    /// The agent proposes the comment is handled; it stays open until the reviewer confirms.
+    public var agentSaysDone = false
+    /// The reviewer confirmed the comment is handled.
+    public var isResolved = false
 
-    private enum CodingKeys: String, CodingKey { case id, lines, quote, text, range, isOutdated, prefix, suffix }
+    private enum CodingKeys: String, CodingKey {
+        case id, lines, quote, text, range, isOutdated, prefix, suffix, agentReply, agentSaysDone, isResolved
+    }
 
     public init(id: UUID = UUID(), lines: ClosedRange<Int>, quote: String, text: String = "", range: NSRange) {
         self.id = id
@@ -48,7 +56,13 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
         isOutdated = try values.decodeIfPresent(Bool.self, forKey: .isOutdated) ?? false
         prefix = try values.decodeIfPresent(String.self, forKey: .prefix) ?? ""
         suffix = try values.decodeIfPresent(String.self, forKey: .suffix) ?? ""
+        agentReply = try values.decodeIfPresent(String.self, forKey: .agentReply)
+        agentSaysDone = try values.decodeIfPresent(Bool.self, forKey: .agentSaysDone) ?? false
+        isResolved = try values.decodeIfPresent(Bool.self, forKey: .isResolved) ?? false
     }
+
+    /// The id an export prints and `mdreview reply` takes: the first 8 hex digits of `id`.
+    public var shortID: String { String(id.uuidString.prefix(8)).lowercased() }
 
     public var lineLabel: String {
         lines.count == 1 ? "\(lines.lowerBound)" : "\(lines.lowerBound)-\(lines.upperBound)"
