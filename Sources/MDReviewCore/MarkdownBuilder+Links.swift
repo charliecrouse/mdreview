@@ -17,7 +17,7 @@ extension MarkdownBuilder {
             attributes[.foregroundColor] = NSColor.linkColor
             let label = NSMutableAttributedString(string: String(match.1), attributes: attributes)
             if isDefinition {
-                let note = (string as NSString).lineRange(for: NSRange(location: NSMaxRange(range), length: 0))
+                let note = (out.string as NSString).lineRange(for: NSRange(location: NSMaxRange(range), length: 0))
                 out.addAttribute(.foregroundColor, value: NSColor.secondaryLabelColor, range: note)
             } else if !match.2.isEmpty {
                 label.append(

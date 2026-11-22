@@ -221,6 +221,11 @@ private struct Rendered {
     #expect(doc.text.contains("[^1] stays code"))
 }
 
+@Test func footnoteDefinitionReferencingAnotherEndsCleanlyAtEndOfFile() {
+    let doc = Rendered("A[^1] B[^2]\n\n[^2]: Other.\n[^1]: see [^2]")
+    #expect(doc.text.contains("1 see 2"))
+}
+
 @Test func rawHTMLShowsAsCodeStyledSource() {
     let doc = Rendered("<details>\n<summary>More</summary>\n</details>\n\nInline <kbd>K</kbd> here.")
     #expect(doc.text.contains("<details>\n<summary>More</summary>\n</details>"))
