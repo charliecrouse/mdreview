@@ -48,7 +48,7 @@ final class MDReviewUITests: XCTestCase {
         try "# Plan\n\nShip the importer behind a feature flag.\n".write(to: file, atomically: true, encoding: .utf8)
         XCTAssertTrue(window.buttons["Plan"].waitForExistence(timeout: 5), "the outline shows the new heading")
         let moved = try send(from: window, for: file)
-        XCTAssertTrue(moved.contains("## 1. fixture.md:3\n"), moved)
+        XCTAssertTrue(moved.contains("## 1. fixture.md:3 · id"), moved)
 
         // Rewriting the quoted text flags the comment instead of dropping it.
         let outdated = window.descendants(matching: .any)["outdated"]
@@ -63,7 +63,7 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertTrue(missing.waitForNonExistence(timeout: 5))
         XCTAssertTrue(outdated.exists)
         let recreated = try send(from: window, for: file)
-        XCTAssertTrue(recreated.contains("## 1. fixture.md:3 (outdated)"), recreated)
+        XCTAssertTrue(recreated.contains(" (outdated)\n") && recreated.contains("fixture.md:3 · id"), recreated)
     }
 
     /// What `mdreview <file>` does: leave a request, then launch the app with no file argument.
@@ -81,6 +81,30 @@ final class MDReviewUITests: XCTestCase {
         _ = try send(from: window, for: file)
         guard case .review(let review) = handoff.takeAnswer(for: id) else { return XCTFail("no review handed off") }
         XCTAssertTrue(review.contains("Name the flag."), review)
+    }
+
+    /// What `mdreview reply` does: leave a reply file, ring the doorbell. The reviewer confirms it.
+    @MainActor func testAgentReplyShowsOnTheCardAndTheReviewerResolvesIt() throws {
+        let file = try fixture()
+        let window = launch(file).windows.firstMatch
+        commentOnWholeFile(in: window)
+        let saved = try send(from: window, for: file)
+        let id = try XCTUnwrap(saved.firstMatch(of: /id ([0-9a-f]{8})/)?.1)
+
+        try ReviewStore(directory: store(for: file)).appendReply(
+            file: file, id: String(id), text: "Named it rollout_v2", resolve: true)
+        DistributedNotificationCenter.default().postNotificationName(
+            ReviewStore.replyNotification, object: nil, userInfo: nil, deliverImmediately: true)
+
+        let reply = window.descendants(matching: .any)["agentReply"].firstMatch
+        XCTAssertTrue(reply.waitForExistence(timeout: 5))
+        let anywhere = { (id: String) in window.descendants(matching: .any)[id].firstMatch }
+        XCTAssertTrue(anywhere("agentDone").exists)
+        XCTAssertFalse(anywhere("resolved").exists, "a reply alone never closes the comment")
+
+        anywhere("resolve").click()
+        XCTAssertTrue(anywhere("resolved").waitForExistence(timeout: 5))
+        XCTAssertTrue(anywhere("reopen").exists)
     }
 
     private func fixture() throws -> URL {

@@ -31,9 +31,11 @@ struct CommentCard: View {
                         .accessibilityIdentifier("outdated")
                 }
                 if comment.isResolved {
-                    badge("Resolved", color: .green, help: "You confirmed this comment is handled")
+                    badge("Resolved", id: "resolved", color: .green, help: "You confirmed this comment is handled")
                 } else if comment.agentSaysDone {
-                    badge("Agent says done", color: .blue, help: "The agent says it handled this; confirm below")
+                    badge(
+                        "Agent says done", id: "agentDone", color: .blue,
+                        help: "The agent says it handled this; confirm below")
                 }
                 Spacer()
                 Button(role: .destructive, action: onDelete) {
@@ -80,7 +82,7 @@ struct CommentCard: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    private func badge(_ title: String, color: Color, help: String) -> some View {
+    private func badge(_ title: String, id: String, color: Color, help: String) -> some View {
         Text(title)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
@@ -88,5 +90,6 @@ struct CommentCard: View {
             .padding(.vertical, 1)
             .background(color.opacity(0.15), in: .capsule)
             .help(help)
+            .accessibilityIdentifier(id)
     }
 }
