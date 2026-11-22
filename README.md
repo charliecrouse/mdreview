@@ -9,15 +9,14 @@
 
 ## What it does
 
-Open a `.md` file, select text in the rendered view and comment on it. Each comment is anchored to the source lines it covers, so an agent knows exactly where to look. A comment can also be about the whole file: press ⇧⌥⌘M or click the page icon in the inspector header. Comments are saved as you go and come back when you reopen the file, even after a rename or move.
+- **Comment** on any selection in the rendered view. Each comment is anchored to its source lines, saved as you go and restored when you reopen the file, even after a rename or move. Comment on the whole file with ⇧⌥⌘M or the page icon in the inspector header.
+- **Send to Agent** (⌘↩) turns every comment into one Markdown review (file path, line ranges, quoted text, your note). It's copied to the clipboard and saved in `~/Library/Application Support/mdreview/Reviews/`.
+- **Skip the paste:** an agent runs `mdreview plan.md`, which opens the file and waits like `git commit` waits for its editor. Your review comes back on standard output; closing the window or quitting exits 1. A review sent with no command waiting is queued for the next one.
+- **Agents reply** per comment with `mdreview reply plan.md 1a2b3c4d "Renamed to rollout_v2" --resolve`. The card shows **Agent says done** and stays open until you **Resolve** it. [skills/mdreview/SKILL.md](skills/mdreview/SKILL.md) teaches an agent the whole loop, and [docs/journeys.md](docs/journeys.md) walks the main flows.
+- **Live:** the view reloads when the file changes and comments follow their text. Ones whose text is gone are marked **Outdated**.
+- **Private:** mdreview never writes into your Markdown's folder. Comments, reviews and `mdreview` handoff files live in `~/Library/Application Support/mdreview/`.
 
-**Send to Agent** (⌘↩) batches every comment into one Markdown review: the file path, the line ranges, the quoted text and your note. It copies the review to the clipboard and saves it as `<name>-<hash>.review.md` in mdreview's own storage; the path appears in a toast over the document. Paste the review into Claude Code, Codex or any other agent, or point the agent at the file.
-
-An agent can skip the copy and paste. `mdreview plan.md` opens the file in the app (launching it if needed) and waits, the way `git commit` waits for its editor. When you press Send to Agent, the review is printed to the command's standard output and it exits 0. Closing the window, quitting the app or opening another file instead makes it exit 1 with a short message on standard error. Ctrl-C just stops the wait. If you press Send with no command waiting, the review is queued and the next `mdreview plan.md` prints it at once instead of waiting.
-
-The agent can answer each comment. Every comment in the review carries a short `id`, and `mdreview reply plan.md 1a2b3c4d "Renamed to rollout_v2" --resolve` puts the answer under that comment's card. `--resolve` only means the agent thinks it is handled: the card shows an **Agent says done** badge and stays open until you click **Resolve**. You can **Reopen** it or add a follow-up in the note, and the next review carries the agent's earlier reply. Agents learn the whole loop from [skills/mdreview/SKILL.md](skills/mdreview/SKILL.md); in Claude Code the wait should run in the background. [docs/journeys.md](docs/journeys.md) walks the main flows step by step.
-
-mdreview never writes into the folder that holds your Markdown. Everything it keeps lives in `~/Library/Application Support/mdreview/`: `Comments/` holds one JSON record per reviewed file, keyed by its path, `Reviews/` holds the sent reviews, and `Handoff/` holds the requests, answers, replies and queued reviews of `mdreview` commands. The command never writes `Comments/`; replies travel through `Handoff/` and the app merges them. A review looks like this:
+A review looks like this:
 
 ```markdown
 # Review of plan.md
@@ -39,9 +38,7 @@ Name the actual flag.
 What's the rollback?
 ```
 
-The view follows the file. When an agent or an editor changes it, mdreview re-renders in place and each comment moves with its quoted text. A comment whose text was rewritten or removed stays in the inspector marked **Outdated**, and Send to Agent labels it so. If the file is deleted, the last version stays on screen until it comes back.
-
-The window is glass: the desktop shows through, blurred, while the document sits on a dense frosted layer so text stays legible. Reduce Transparency or Increase Contrast make it opaque.
+The window is glass: the desktop shows through, blurred, behind a frosted layer that keeps text legible. Reduce Transparency or Increase Contrast make it opaque.
 
 ## Install
 
@@ -80,7 +77,6 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 
 ## Limitations
 
-- A saved record that can't be read is moved aside as `<hash>.unreadable-<time>.json` in `Comments/`, and the file opens with no comments.
 - Records for files you delete stay in `~/Library/Application Support/mdreview/` until you remove them.
 - One file at a time, and the Markdown is read-only.
 - A comment follows its quoted text as rendered, and remembers about 30 characters on each side of it to tell repeated phrases apart. While the file is open, each change is compared line by line, so a comment whose lines are unchanged shifts with them, however many other places one write edits. When an edit touches its lines, it follows its quote only if exactly one copy is left in the changed lines, both before and after the edit, counting only copies with the same surrounding text when the changed lines held several; otherwise it is marked outdated rather than moved to another copy. On reopen, a comment whose quote moved follows it only when exactly one copy is left the same way and that copy keeps the text on at least one side of it; otherwise it is marked outdated, even if the quote just moved into a new sentence. An outdated comment keeps the line numbers of the earlier version and stays outdated, across edits and reopens, until you delete it.
