@@ -33,6 +33,7 @@ struct ContentView: View {
                         onSelect: { model.selection = $0 },
                         onSelectionRect: { selectionRect = $0 },
                         onComment: { model.addComment() },
+                        onOpen: { model.open($0) },
                         onScrolled: { model.scrollTarget = nil }
                     )
                     .overlay(alignment: .topLeading) {

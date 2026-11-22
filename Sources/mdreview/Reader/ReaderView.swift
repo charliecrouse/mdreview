@@ -11,6 +11,7 @@ struct ReaderView: NSViewRepresentable {
     let onSelect: @MainActor (NSRange) -> Void
     let onSelectionRect: @MainActor (CGRect?) -> Void
     let onComment: @MainActor () -> Void
+    let onOpen: @MainActor (URL) -> Void
     let onScrolled: @MainActor @Sendable () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -93,6 +94,14 @@ struct ReaderView: NSViewRepresentable {
         }
 
         @objc func addComment() { parent?.onComment() }
+
+        /// A link to another Markdown file opens it here; other links open as usual.
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            guard let url = link as? URL, url.isFileURL, ["md", "markdown"].contains(url.pathExtension.lowercased())
+            else { return false }
+            parent?.onOpen(url)
+            return true
+        }
 
         func highlight(_ comments: [ReviewComment], focused: ReviewComment.ID?) {
             guard let textView, let layout = textView.layoutManager else { return }
