@@ -83,6 +83,17 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertTrue(review.contains("Name the flag."), review)
     }
 
+    /// With no command waiting, Send queues the review for the next `mdreview <file>`.
+    @MainActor func testSendWithNoAgentWaitingQueuesTheReview() throws {
+        let file = try fixture()
+        let window = launch(file).windows.firstMatch
+        commentOnWholeFile(in: window)
+        _ = try send(from: window, for: file)
+
+        let queued = ReviewStore(directory: store(for: file)).takePending(for: file)
+        XCTAssertTrue(try XCTUnwrap(queued).contains("Name the flag."), queued ?? "")
+    }
+
     /// What `mdreview reply` does: leave a reply file, ring the doorbell. The reviewer confirms it.
     @MainActor func testAgentReplyShowsOnTheCardAndTheReviewerResolvesIt() throws {
         let file = try fixture()
