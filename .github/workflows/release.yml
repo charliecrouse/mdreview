@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to rebuild and upload assets for (vX.Y.Z)
+        required: true
 
 permissions:
   contents: write
@@ -10,6 +15,7 @@ permissions:
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       created: ${{ steps.rp.outputs.release_created }}
@@ -21,16 +27,16 @@ jobs:
   # Tags made with GITHUB_TOKEN start no other workflow, so the build runs here, once the release exists.
   build:
     needs: release-please
-    if: needs.release-please.outputs.created == 'true'
+    if: always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.created == 'true')
     runs-on: macos-26
+    env:
+      TAG: ${{ inputs.tag || needs.release-please.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-please.outputs.tag }}
+          ref: ${{ env.TAG }}
       - run: make bootstrap
       - name: Tag must match the project version
-        env:
-          TAG: ${{ needs.release-please.outputs.tag }}
         run: |
           version=$(sed -n 's/^ *MARKETING_VERSION: "\([^"]*\)".*/\1/p' project.yml)
           [ "$TAG" = "v$version" ] || { echo "tag $TAG does not match project.yml version $version" >&2; exit 1; }
@@ -38,7 +44,6 @@ jobs:
       - run: |
           ditto -c -k --keepParent build/mdreview.app mdreview.zip
           shasum -a 256 mdreview.zip > mdreview.zip.sha256
-      - run: gh release upload "$TAG" mdreview.zip mdreview.zip.sha256
+      - run: gh release upload --clobber "$TAG" mdreview.zip mdreview.zip.sha256
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.release-please.outputs.tag }}
