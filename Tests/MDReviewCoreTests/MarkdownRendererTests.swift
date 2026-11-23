@@ -256,3 +256,29 @@ private struct Rendered {
     #expect(MarkdownRenderer.quote(of: padded, in: doc.rendered.text) == "First.")
     #expect(MarkdownRenderer.quote(of: NSRange(location: 0, length: doc.text.length + 1), in: doc.rendered.text) == nil)
 }
+
+@Test func tableColumnSpansKeepLaterCellsInTheirColumns() {
+    let doc = Rendered("| a | b | c | d |\n|---|---|---|---|\n| x ||| y |\n")
+    #expect((doc.blocks(of: "x").last as? NSTextTableBlock)?.columnSpan == 3)
+    #expect((doc.blocks(of: "y").last as? NSTextTableBlock)?.startingColumn == 3)
+    #expect(doc.everyCharacterHasALine)
+}
+
+@Test(arguments: [
+    "", "\n", "\r", "\r\r# Mac line ends\r", "\0", "\u{FEFF}# BOM", "---", "---\n", "---\n---", "---\n---\n---",
+    "---\nunclosed: front matter\n", "...\n", "| a |\n|---|\n| b | c | d |", "|a|\n|-|\n|^|\n|x|", "| a | b |\n|---|",
+    "[^a]:", "[^a]:\n[^b]:", "```\n[^a]: x\n```", "![](missing.png)", "![]()", "[]()", "<", "```", "~~~\n",
+    "1. \n2.", "- [ ]", "    ", "# ", "e\u{301}\u{301}\u{301} 👩‍👩‍👧 é",
+    String(repeating: "> ", count: 20_000) + "deep", String(repeating: "- ", count: 300) + "deep",
+    String(repeating: "*", count: 4000) + "a" + String(repeating: "*", count: 4000),
+    String(repeating: "*", count: 5000), String(repeating: "[", count: 5000),
+    String(repeating: "[", count: 5000) + "a" + String(repeating: "](b)", count: 5000),
+    String(repeating: "- > ", count: 2000) + "deep",
+    String(repeating: "x", count: 200_000),
+    String(repeating: "| a ", count: 300) + "|\n" + String(repeating: "|-", count: 300) + "|",
+])
+@MainActor  // the app renders on the main thread, whose stack is far deeper than a test thread's
+func extremeAndMalformedMarkdownRenders(source: String) {
+    let doc = Rendered(source)
+    #expect(doc.everyCharacterHasALine)
+}

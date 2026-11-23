@@ -84,7 +84,7 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 - Send to Agent is clipboard, file and the `mdreview` command; there are no agent plugins or MCP server. The agent protocol is the command line, and the review is queued only until the next `mdreview <file>` for that file, one review per file.
 - `mdreview reply` doesn't check the id: a reply to an unknown or ambiguous id is dropped without an error.
 - The `mdreview` command runs from the `.app` only, not from `swift run`.
-- Remote images show their alt text, footnotes stay where they're defined, raw HTML shows as source, and Mermaid diagrams show as code.
+- Remote images show their alt text, footnotes stay where they're defined, raw HTML shows as source, and Mermaid diagrams show as code. Quotes and lists nested more than 32 deep show their deeper levels as source text.
 - The `.app` is ad-hoc signed for local use: no Developer ID, notarization or DMG.
 
 ## Development
@@ -105,7 +105,7 @@ On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Home
 | `make hooks` | One-time: use `.githooks/`, so every commit runs `make lint` |
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
-| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send; then show an agent reply with its badge and resolve it; then add a page comment, send it and resolve it |
+| `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send; then show an agent reply with its badge and resolve it; then add a page comment, send it and resolve it; then delete a fresh empty comment and open another file mid-edit |
 
 Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 

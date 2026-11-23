@@ -72,7 +72,7 @@ final class MDReviewUITests: XCTestCase {
         let handoff = ReviewStore(directory: store(for: file))
         let id = try handoff.request(file)
         let app = XCUIApplication()
-        app.launchArguments = ["-StoreDirectory", store(for: file).path]
+        app.launchArguments = ["-StoreDirectory", store(for: file).path] + Self.noRestore
         app.launch()
         let window = app.windows.firstMatch
         commentOnWholeFile(in: window)
@@ -166,6 +166,39 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertFalse(window.buttons["sendToAgent"].isEnabled)
     }
 
+    /// Deleting the last card while its fresh, empty field still has focus.
+    @MainActor func testDeletingAFreshEmptyCommentKeepsTheAppRunning() throws {
+        let file = try fixture()
+        let app = launch(file)
+        let window = app.windows.firstMatch
+        let fields = editFreshCommentAfterAPageComment(in: window)
+
+        window.buttons.matching(identifier: "Delete comment").element(boundBy: 1).click()
+        XCTAssertTrue(fields.element(boundBy: 1).waitForNonExistence(timeout: 5))
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertEqual(fields.firstMatch.value as? String, "Add a rollback plan.")
+    }
+
+    /// An agent's `mdreview <other file>` swaps in a file with fewer comments while the last one is being edited.
+    @MainActor func testOpeningAnotherFileWhileEditingACommentKeepsTheAppRunning() throws {
+        let file = try fixture()
+        let other = file.deletingLastPathComponent().appendingPathComponent("other.md")
+        try "# Other\n".write(to: other, atomically: true, encoding: .utf8)
+        let handoff = ReviewStore(directory: store(for: file))
+        try handoff.save([.page(text: "Other note.")], for: other)
+        let app = launch(file)
+        let window = app.windows.firstMatch
+        let fields = editFreshCommentAfterAPageComment(in: window)
+
+        _ = try handoff.request(other)
+        DistributedNotificationCenter.default().postNotificationName(
+            ReviewStore.handoffNotification, object: nil, userInfo: nil, deliverImmediately: true)
+        XCTAssertTrue(window.buttons["Other"].waitForExistence(timeout: 5), "the outline shows the other file")
+        XCTAssertTrue(fields.element(boundBy: 1).waitForNonExistence(timeout: 5))
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertEqual(fields.firstMatch.value as? String, "Other note.")
+    }
+
     private func fixture() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -177,10 +210,13 @@ final class MDReviewUITests: XCTestCase {
     /// Launches on `file` with the app's storage in a `store/` folder beside it.
     @MainActor private func launch(_ file: URL) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-StoreDirectory", store(for: file).path, file.path]
+        app.launchArguments = ["-StoreDirectory", store(for: file).path] + Self.noRestore + [file.path]
         app.launch()
         return app
     }
+
+    /// After a crash macOS asks whether to reopen windows, which would hide the window from every later test.
+    private static let noRestore = ["-ApplePersistenceIgnoreState", "YES"]
 
     private func store(for file: URL) -> URL {
         file.deletingLastPathComponent().appendingPathComponent("store")
@@ -202,6 +238,23 @@ final class MDReviewUITests: XCTestCase {
         let name = try XCTUnwrap(names.first)
         XCTAssertTrue(name.hasPrefix("fixture-") && name.hasSuffix(".review.md"), name)
         return try String(contentsOf: reviews.appendingPathComponent(name), encoding: .utf8)
+    }
+
+    /// Adds a page comment with text, then a comment on the fixture's line, and clicks into the new, empty field.
+    @MainActor private func editFreshCommentAfterAPageComment(in window: XCUIElement) -> XCUIElementQuery {
+        let reader = window.textViews["reader"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        window.typeKey("m", modifierFlags: [.command, .option, .shift])
+        let fields = window.descendants(matching: .any).matching(identifier: "commentField")
+        XCTAssertTrue(fields.firstMatch.waitForExistence(timeout: 5))
+        fields.firstMatch.click()
+        fields.firstMatch.typeText("Add a rollback plan.")
+        reader.click()
+        reader.typeKey("a", modifierFlags: .command)
+        window.typeKey("m", modifierFlags: [.command, .option])
+        XCTAssertTrue(fields.element(boundBy: 1).waitForExistence(timeout: 5))
+        fields.element(boundBy: 1).click()
+        return fields
     }
 
     /// Selects the fixture's only line and comments on it (⌥⌘M).

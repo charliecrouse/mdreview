@@ -209,3 +209,16 @@ private let repeated = "Please ship it today, and then after that ship it again 
     let decoded = try JSONDecoder().decode(ReviewComment.self, from: JSONEncoder().encode(page))
     #expect(decoded.isPage && decoded == page)
 }
+
+/// A damaged record must be refused as unreadable, not trap when the comment is measured or shown.
+@Test(arguments: [
+    #""lines":[1,1],"range":[-5,10]"#, #""lines":[1,1],"range":[5,-10]"#,
+    #""lines":[1,1],"range":[9223372036854775807,1]"#, #""lines":[0,9223372036854775807],"range":[0,4]"#,
+    #""lines":[-1,1],"range":[0,4]"#,
+])
+func commentWithImpossibleBoundsFailsToDecode(bounds: String) {
+    let saved =
+        #"{"id":"178F91EC-977E-4D33-90FC-F3D9DA236313","quote":"Ship","text":"","isOutdated":true,"#
+        + bounds + "}"
+    #expect(throws: DecodingError.self) { try JSONDecoder().decode(ReviewComment.self, from: Data(saved.utf8)) }
+}

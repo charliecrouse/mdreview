@@ -18,11 +18,12 @@ struct CommentsInspector: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
-                        ForEach(Array($model.comments.enumerated()), id: \.element.id) { index, $comment in
+                        ForEach(Array(model.comments.enumerated()), id: \.element.id) { index, comment in
                             if model.filter.includes(comment) {
                                 CommentCard(
                                     number: index + 1,
-                                    comment: $comment,
+                                    comment: comment,
+                                    text: text(of: comment.id),
                                     isFocused: model.focusedComment == comment.id,
                                     focusedField: $focusedField,
                                     onSelect: { model.reveal(comment) },
@@ -40,5 +41,13 @@ struct CommentsInspector: View {
         .safeAreaInset(edge: .top, spacing: 0) { InspectorHeader(model: model) }
         .background(BehindWindowGlass().ignoresSafeArea())
         .onChange(of: model.focusedComment) { _, id in focusedField = id }
+    }
+
+    /// Bound by id, not position: a field still editing a comment that was just deleted, or that left with the
+    /// file, reads and writes nothing instead of indexing past the end of the list.
+    private func text(of id: ReviewComment.ID) -> Binding<String> {
+        Binding(
+            get: { model.comments.first { $0.id == id }?.text ?? "" },
+            set: { model.setText($0, for: id) })
     }
 }

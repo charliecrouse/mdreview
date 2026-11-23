@@ -30,6 +30,7 @@ public enum MarkdownRenderer {
     /// The parser has no footnotes and reads a `[^1]: note` line as a link definition, which renders as
     /// nothing. Escaping its bracket keeps the note as text; code blocks are left alone.
     static func parse(_ lines: [String]) -> Document {
+        let lines = lines.map(capQuoteDepth)
         let options: ParseOptions = [.disableSmartOpts]  // rendered quotes must match the file's own text
         let isDefinition = { (line: String) in line.prefixMatch(of: /\ {0,3}\[\^[^\]\s]+\]:/) != nil }
         guard lines.contains(where: isDefinition) else {
@@ -42,6 +43,26 @@ public enum MarkdownRenderer {
                 : line
         }
         return Document(parsing: escaped.joined(separator: "\n"), options: options)
+    }
+
+    /// The parser recurses once per quote level and caps only list nesting, so a line opening more quotes than
+    /// `MarkdownBuilder.maxNesting` has its deeper markers escaped into text rather than overflow the stack.
+    static func capQuoteDepth(_ line: String) -> String {
+        // ponytail: also escapes such a line inside fenced code; skip verbatim lines if real code ever needs it.
+        var depth = 0
+        for index in line.indices {
+            switch line[index] {
+            case ">":
+                depth += 1
+                guard depth > MarkdownBuilder.maxNesting else { continue }
+                var capped = line
+                capped.insert("\\", at: index)
+                return capped
+            case " ", "\t", "-", "*", "+", ".", ")", "0"..."9": continue
+            default: return line
+            }
+        }
+        return line
     }
 
     private static func verbatimLines(in markup: Markup) -> Set<Int> {
