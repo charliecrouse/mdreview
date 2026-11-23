@@ -153,7 +153,9 @@ To cut a release, set `MARKETING_VERSION` in `project.yml` (the one version sour
 - `UITests/`: the end-to-end UI test.
 - `docs/journeys.md`: the main user journeys as flows, each naming the UI test that covers it. `docs/images/` holds the screenshot.
 - `skills/mdreview/SKILL.md`: the agent skill that teaches the review loop.
-- `.github/workflows/ci.yml`: the `check` job, which runs `make check` on GitHub Actions.
+- `.github/workflows/ci.yml`: the `check` job, which runs `make check` and `make app` on GitHub Actions.
+- `.github/workflows/release.yml`: builds the app and publishes `mdreview.zip` when a version tag is pushed.
+- `scripts/install.sh`: the install steps behind `make install`.
 - `scripts/docs-check.sh`: the README freshness check behind `make docs-check`; it also checks that every test named in `docs/journeys.md` exists.
 
 ## License
