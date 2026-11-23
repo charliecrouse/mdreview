@@ -43,19 +43,23 @@ The window is glass: the desktop shows through, blurred, behind a frosted layer 
 
 ## Install
 
-There's no prebuilt download yet; build it from source. You need macOS 26 (Tahoe) and Xcode 26 (Swift 6.2). From a clone of this repository (the file argument is optional):
+Needs macOS 26 (Tahoe). Pick one path.
+
+**Download.** Get `mdreview.zip` from [Releases](https://github.com/charliecrouse/mdreview/releases), unzip it and drag `mdreview.app` to `/Applications`. The build is ad-hoc signed, not notarized, so macOS blocks the first launch: open the app once, then approve it in System Settings → Privacy & Security → **Open Anyway**. To give agents the command, link it onto your `PATH` and, for Claude Code, copy the skill:
 
 ```sh
-swift run mdreview README.md
+ln -sf /Applications/mdreview.app/Contents/Resources/mdreview /opt/homebrew/bin/mdreview
 ```
 
-For a standalone app, run `make bootstrap` once, then `make app`. It builds an ad-hoc signed `build/mdreview.app` with its icon; drag it to `/Applications`.
-
-To give agents the `mdreview` command, link the script inside the app into a folder on your `PATH`:
+**From source.** You need Xcode 26 (Swift 6.2). In a clone of this repository, run `make bootstrap` once, then:
 
 ```sh
-ln -s /Applications/mdreview.app/Contents/Resources/mdreview /usr/local/bin/mdreview
+make install
 ```
+
+It builds the app, copies it to `/Applications`, links `mdreview` into `$(brew --prefix)/bin` (or `~/.local/bin` without Homebrew, with a hint if that isn't on your `PATH`) and copies the agent skill to `~/.claude/skills/mdreview/`. It needs no `sudo` and is safe to rerun. For Codex, copy `skills/mdreview/` to `~/.codex/skills/mdreview/` yourself.
+
+`mdreview --version` prints the installed version. To try it without installing (the file argument is optional): `swift run mdreview README.md`.
 
 Then an agent runs `mdreview plan.md` and reads your review from the output.
 
@@ -106,10 +110,13 @@ On a fresh clone, run `make bootstrap`, then `make check`. Bootstrap needs [Home
 | `make project` | Generate `mdreview.xcodeproj` from `project.yml` (the project is gitignored) |
 | `make app` | Release build into `build/mdreview.app` |
 | `make uitest` | Run the XCUITest in `UITests/`: open a file, toggle both sidebars, comment, Send to Agent, relaunch and find the comment again; then edit, delete and restore the file; then open a file an `mdreview` command asked for and answer it on Send; then show an agent reply with its badge and resolve it; then add a page comment, send it and resolve it; then delete a fresh empty comment and open another file mid-edit |
+| `make install` | `make app`, then copy it to `/Applications`, link the CLI onto `PATH` and copy the skill to `~/.claude/skills/mdreview/`. Safe to rerun |
 
 Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle settings and signing live in `project.yml`; open the generated project in Xcode to debug.
 
-CI (`.github/workflows/ci.yml`) runs `make bootstrap` and `make check` on every pull request and every push to `main`.
+CI (`.github/workflows/ci.yml`) runs `make bootstrap`, `make check` and `make app` on every pull request and every push to `main`.
+
+To cut a release, set `MARKETING_VERSION` in `project.yml` (the one version source for the app and `mdreview --version`), merge it, then push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`. `.github/workflows/release.yml` fails if the tag and `project.yml` disagree, builds the app and attaches `mdreview.zip` to a new GitHub release.
 
 `make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
 

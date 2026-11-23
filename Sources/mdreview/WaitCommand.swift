@@ -6,8 +6,14 @@ import MDReviewCore
 enum WaitCommand {
     static func run(_ args: [String]) -> Never {
         if args.first == "reply" { ReplyCommand.run(Array(args.dropFirst())) }
+        if args == ["--version"] {
+            print(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown")
+            exit(0)
+        }
         guard args.count == 1, let path = args.first, !path.hasPrefix("-") else {
-            fail("usage: mdreview <file.md> | mdreview reply <file.md> <id> <text> [--resolve]", status: 2)
+            fail(
+                "usage: mdreview <file.md> | mdreview reply <file.md> <id> <text> [--resolve] | mdreview --version",
+                status: 2)
         }
         let file = URL(fileURLWithPath: path).standardizedFileURL
         guard FileManager.default.isReadableFile(atPath: file.path) else { fail("can't read \(path)") }

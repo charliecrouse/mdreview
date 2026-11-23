@@ -12,3 +12,4 @@ jobs:
       - uses: actions/checkout@v4
       - run: make bootstrap
       - run: make check
+      - run: make app
