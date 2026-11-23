@@ -25,7 +25,7 @@ targets:
       - Sources/mdreview
       - path: App
         excludes: [mdreview]
-      # The command-line entry point; README's Install section says how to put it on PATH.
+      # The command-line entry point; `make install` links it onto PATH.
       - path: App/mdreview
         buildPhase: resources
     dependencies:

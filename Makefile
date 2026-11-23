@@ -1,7 +1,7 @@
 SRC := Sources Tests UITests Package.swift
 XCODE := xcodebuild -project mdreview.xcodeproj -scheme mdreview -derivedDataPath build/DerivedData
 
-.PHONY: bootstrap build run test lint format deadcode docs-check check hooks project app uitest
+.PHONY: bootstrap build run test lint format deadcode docs-check check hooks project app install uitest
 
 # The Command Line Tools can't run `swift test` or xcodebuild, so fail early unless Xcode is selected.
 bootstrap:
@@ -44,6 +44,9 @@ app: project
 	$(XCODE) -configuration Release build
 	rm -rf build/mdreview.app
 	ditto build/DerivedData/Build/Products/Release/mdreview.app build/mdreview.app
+
+install: app
+	scripts/install.sh
 
 # Needs macOS Automation Mode (`automationmodetool enable-automationmode-without-authentication`, once).
 uitest: project
