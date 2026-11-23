@@ -84,7 +84,7 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 - Send to Agent is clipboard, file and the `mdreview` command; there are no agent plugins or MCP server. The agent protocol is the command line, and the review is queued only until the next `mdreview <file>` for that file, one review per file.
 - `mdreview reply` doesn't check the id: a reply to an unknown or ambiguous id is dropped without an error.
 - The `mdreview` command runs from the `.app` only, not from `swift run`.
-- Remote images show their alt text, footnotes stay where they're defined, raw HTML shows as source, and Mermaid diagrams show as code.
+- Remote images show their alt text, footnotes stay where they're defined, raw HTML shows as source, and Mermaid diagrams show as code. Quotes and lists nested more than 32 deep show their deeper levels as source text.
 - The `.app` is ad-hoc signed for local use: no Developer ID, notarization or DMG.
 
 ## Development

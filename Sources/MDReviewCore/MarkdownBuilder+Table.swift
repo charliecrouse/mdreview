@@ -59,7 +59,7 @@ extension MarkdownBuilder {
             var column = 0
             for cell in rowCells {
                 let span = Int(cell.colspan)
-                defer { column += max(span, 1) }
+                defer { column += span }  // a cell another spans has no column of its own
                 guard span > 0, cell.rowspan > 0 else { continue }
                 let font = row == 0 ? NSFont.systemFont(ofSize: bodySize, weight: .semibold) : body
                 cells.append(

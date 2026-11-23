@@ -3,7 +3,8 @@ import SwiftUI
 
 struct CommentCard: View {
     let number: Int
-    @Binding var comment: ReviewComment
+    let comment: ReviewComment
+    @Binding var text: String
     let isFocused: Bool
     var focusedField: FocusState<ReviewComment.ID?>.Binding
     let onSelect: () -> Void
@@ -56,7 +57,7 @@ struct CommentCard: View {
                             width: 2)
                     }
             }
-            TextField("Add a comment…", text: $comment.text, axis: .vertical)
+            TextField("Add a comment…", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...10)
                 .focused(focusedField, equals: comment.id)

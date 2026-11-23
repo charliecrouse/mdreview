@@ -135,6 +135,11 @@ final class ReviewModel {
         if !resolved { comments[index].agentSaysDone = false }
     }
 
+    func setText(_ text: String, for id: ReviewComment.ID) {
+        guard let index = comments.firstIndex(where: { $0.id == id }), comments[index].text != text else { return }
+        comments[index].text = text
+    }
+
     func delete(_ id: ReviewComment.ID) {
         comments.removeAll { $0.id == id }
         if focusedComment == id { focusedComment = nil }

@@ -47,6 +47,7 @@ struct MarkdownBuilder {
     }
 
     private mutating func block(_ node: Markup, _ context: Context) {
+        if context.blocks.count + context.listDepth >= Self.maxNesting { return sourceLines(of: node, context) }
         var context = context
         if context.marker != nil, !(node is Paragraph || node is Markdown.Heading) {
             paragraph(NSAttributedString(), line: line(of: node), context)
@@ -67,6 +68,19 @@ struct MarkdownBuilder {
     }
 
     func line(of node: Markup) -> Int { node.range?.lowerBound.line ?? 1 }
+
+    /// Deeper than any real document nests; walking further could overflow the stack on a hostile file.
+    static let maxNesting = 32
+
+    /// A block nested past `maxNesting`, shown as its source lines, which takes no further recursion.
+    private mutating func sourceLines(of node: Markup, _ context: Context) {
+        guard let range = node.range else { return }
+        let attributes: [NSAttributedString.Key: Any] = [.font: body, .foregroundColor: context.color]
+        for line in range.lowerBound.line...max(range.lowerBound.line, range.upperBound.line)
+        where lines.indices.contains(line - 1) {
+            paragraph(NSAttributedString(string: lines[line - 1], attributes: attributes), line: line, context)
+        }
+    }
 
     /// The paragraph style of a block at `context`, with a tab stop after a list marker.
     func style(_ context: Context, before: CGFloat = 0) -> NSMutableParagraphStyle {

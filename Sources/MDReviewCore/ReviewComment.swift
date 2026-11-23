@@ -54,7 +54,8 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     }
 
     /// Records saved before comments could go outdated have no `isOutdated`, and older ones no context;
-    /// they load as current, and a repeated quote without context can't be told apart.
+    /// they load as current, and a repeated quote without context can't be told apart. A range or lines no file
+    /// could hold fail, so the store sets the record aside as unreadable.
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         id = try values.decode(UUID.self, forKey: .id)
@@ -62,6 +63,12 @@ public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
         quote = try values.decode(String.self, forKey: .quote)
         text = try values.decode(String.self, forKey: .text)
         range = try values.decode(NSRange.self, forKey: .range)
+        guard range.location >= 0, range.length >= 0, range.location <= Int.max - range.length else {
+            throw DecodingError.dataCorruptedError(forKey: .range, in: values, debugDescription: "Impossible range")
+        }
+        guard lines.lowerBound >= 0, lines.upperBound < Int.max else {
+            throw DecodingError.dataCorruptedError(forKey: .lines, in: values, debugDescription: "Impossible lines")
+        }
         isOutdated = try values.decodeIfPresent(Bool.self, forKey: .isOutdated) ?? false
         prefix = try values.decodeIfPresent(String.self, forKey: .prefix) ?? ""
         suffix = try values.decodeIfPresent(String.self, forKey: .suffix) ?? ""
