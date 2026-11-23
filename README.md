@@ -45,11 +45,15 @@ The window is glass: the desktop shows through, blurred, behind a frosted layer 
 
 Needs macOS 26 (Tahoe). Pick one path.
 
-**Download.** Get `mdreview.zip` from [Releases](https://github.com/charliecrouse/mdreview/releases), unzip it and drag `mdreview.app` to `/Applications`. The build is ad-hoc signed, not notarized, so macOS blocks the first launch: open the app once, then approve it in System Settings → Privacy & Security → **Open Anyway**. To give agents the command, link it onto your `PATH` and, for Claude Code, copy the skill:
+**Download.** Get `mdreview.zip` from [Releases](https://github.com/charliecrouse/mdreview/releases), unzip it and drag `mdreview.app` to `/Applications`. The build is ad-hoc signed, not notarized, so macOS blocks the first launch: open the app once, then approve it in System Settings → Privacy & Security → **Open Anyway**. To give agents the command, link it onto your `PATH` and, for Claude Code, fetch the skill:
 
 ```sh
-ln -sf /Applications/mdreview.app/Contents/Resources/mdreview /opt/homebrew/bin/mdreview
+mkdir -p ~/.local/bin ~/.claude/skills/mdreview
+ln -sf /Applications/mdreview.app/Contents/Resources/mdreview ~/.local/bin/mdreview
+curl -fsSL https://raw.githubusercontent.com/charliecrouse/mdreview/main/skills/mdreview/SKILL.md -o ~/.claude/skills/mdreview/SKILL.md
 ```
+
+Make sure `~/.local/bin` is on your `PATH`.
 
 **From source.** You need Xcode 26 (Swift 6.2). In a clone of this repository, run `make bootstrap` once, then:
 
