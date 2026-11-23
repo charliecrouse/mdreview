@@ -120,7 +120,9 @@ Style lives in `.swift-format`, `.swiftlint.yml` and `.editorconfig`. Bundle set
 
 CI (`.github/workflows/ci.yml`) runs `make bootstrap`, `make check` and `make app` on every pull request and every push to `main`.
 
-To cut a release, set `MARKETING_VERSION` in `project.yml` (the one version source for the app and `mdreview --version`), merge it, then push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`. `.github/workflows/release.yml` fails if the tag and `project.yml` disagree, builds the app and attaches `mdreview.zip` to a new GitHub release.
+Releases come from [release-please](https://github.com/googleapis/release-please). On every push to `main`, `.github/workflows/release.yml` keeps a release PR open that bumps `MARKETING_VERSION` in `project.yml` (the one version source for the app and `mdreview --version`) and writes `CHANGELOG.md` from the conventional commits since the last release. To cut a release, merge that PR: the workflow tags `vX.Y.Z`, creates the GitHub release with the changelog as its notes, fails if the tag and `project.yml` disagree, builds the app and attaches `mdreview.zip` and `mdreview.zip.sha256`. The first release is `v0.1.0` (`initial-version` in `release-please-config.json`). `feat` bumps the minor version and `fix` the patch while the version is below 1.0; a `feat!` or `BREAKING CHANGE` footer bumps the minor too (`bump-minor-pre-major`), and putting `Release-As: 1.0.0` in a commit body forces a version. For a pre-release, force a prerelease version the same way (`Release-As: 0.2.0-rc.1`) and merge the resulting release PR.
+
+Release tags are protected by the `release-tags` ruleset (`.github/rulesets/release-tags.json`): `v*` tags can't be deleted, moved or force-pushed. Creation isn't restricted, because the workflow's `GITHUB_TOKEN` can't be granted a bypass and would be blocked too. Apply or refresh it once with `gh api repos/charliecrouse/mdreview/rulesets --input .github/rulesets/release-tags.json` (`-X PUT .../rulesets/<id>` to update).
 
 `make uitest` drives the real app, so macOS must allow Automation Mode. Enable it once with `automationmodetool enable-automationmode-without-authentication` (it asks for an admin password), or approve the prompt Xcode shows on the first run. It isn't part of `make check`.
 
@@ -154,7 +156,9 @@ To cut a release, set `MARKETING_VERSION` in `project.yml` (the one version sour
 - `docs/journeys.md`: the main user journeys as flows, each naming the UI test that covers it. `docs/images/` holds the screenshot.
 - `skills/mdreview/SKILL.md`: the agent skill that teaches the review loop.
 - `.github/workflows/ci.yml`: the `check` job, which runs `make check` and `make app` on GitHub Actions.
-- `.github/workflows/release.yml`: builds the app and publishes `mdreview.zip` when a version tag is pushed.
+- `.github/workflows/release.yml`: runs release-please, then builds the app and attaches `mdreview.zip` and its checksum when a release PR is merged.
+- `.github/rulesets/release-tags.json`: the tag ruleset that protects `v*` release tags.
+- `release-please-config.json`, `.release-please-manifest.json`: release-please settings and its last-released version.
 - `scripts/install.sh`: the install steps behind `make install`.
 - `scripts/docs-check.sh`: the README freshness check behind `make docs-check`; it also checks that every test named in `docs/journeys.md` exists.
 
