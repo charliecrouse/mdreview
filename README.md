@@ -93,7 +93,7 @@ Then an agent runs `mdreview plan.md` and reads your review from the output.
 - `mdreview reply` doesn't check the id: a reply to an unknown or ambiguous id is dropped without an error.
 - The `mdreview` command runs from the `.app` only, not from `swift run`.
 - Remote images show their alt text, footnotes stay where they're defined, raw HTML shows as source, and Mermaid diagrams show as code. Quotes and lists nested more than 32 deep show their deeper levels as source text.
-- The `.app` is ad-hoc signed for local use: no Developer ID, notarization or DMG.
+- The `.app` is ad-hoc signed: no Developer ID, notarization or DMG, so the first launch needs **Open Anyway** (see Install).
 
 ## Development
 
