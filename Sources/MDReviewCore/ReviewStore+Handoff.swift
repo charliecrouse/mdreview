@@ -19,8 +19,6 @@ extension ReviewStore {
         var date: Date
     }
 
-    private var handoff: URL { directory.appending(path: "Handoff", directoryHint: .isDirectory) }
-
     /// Records that process `pid` waits for the review of `file`; returns the request's id.
     public func request(_ file: URL, from pid: Int32 = getpid()) throws -> String {
         let id = "\(pid)-\(UUID().uuidString)"

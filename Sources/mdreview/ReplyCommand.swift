@@ -9,7 +9,7 @@ enum ReplyCommand {
         let words = args.filter { $0 != "--resolve" }
         guard words.count == 3 else { fail("usage: mdreview reply <file.md> <id> <text> [--resolve]") }
         let file = URL(fileURLWithPath: words[0]).standardizedFileURL
-        guard let store = ReviewModel.makeStore() else { fail("no Application Support folder to reply through") }
+        guard let store = ReviewStore.forApp() else { fail("no Application Support folder to reply through") }
         do {
             try store.appendReply(file: file, id: words[1], text: words[2], resolve: resolve)
         } catch {

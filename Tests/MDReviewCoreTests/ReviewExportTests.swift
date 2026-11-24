@@ -1,6 +1,7 @@
 import Foundation
-import MDReviewCore
 import Testing
+
+@testable import MDReviewCore
 
 @Test func reviewExportCarriesPathLinesQuoteAndComment() {
     let file = URL(fileURLWithPath: "/tmp/notes/plan.md")

@@ -138,7 +138,7 @@ Release tags are protected by the `release-tags` ruleset (`.github/rulesets/rele
   - `ReviewComment+Reanchor.swift`: moves a comment to its quoted text after the file changes, or marks it outdated.
   - `ReviewExport.swift`: the batched review an agent receives.
   - `ReviewStore.swift`: saved comments and sent reviews, kept in the app's Application Support folder.
-  - `ReviewComment+Reply.swift`: merges agent replies into comments by short id.
+  - `ReviewComment+Edit.swift`: every change to a file's comments, addressed by comment id: text, resolve, delete and agent replies by short id.
   - `ReviewStore+Handoff.swift`: the request and answer files behind the `mdreview` command.
   - `ReviewStore+Replies.swift`: reply files and the review queued while no command waits.
 - `Sources/mdreview/`: the SwiftUI app.
@@ -147,6 +147,7 @@ Release tags are protected by the `release-tags` ruleset (`.github/rulesets/rele
   - `WaitCommand.swift`: the `mdreview <file>` command: opens the file in the app and waits for the review.
   - `ReplyCommand.swift`: `mdreview reply`, which leaves an agent's answer to one comment.
   - `ReviewModel.swift`: the open file, its comments (loaded and saved through the store), live reload and Send to Agent.
+  - `ReviewStore+App.swift`: the store the app and its commands share, honoring the UI test's `-StoreDirectory`.
   - `FileWatcher.swift`: watches the open file, including atomic saves, deletion and recreation.
   - `Views/`: the split view with a glass sidebar (outline and comments) and the comment inspector.
   - `Reader/`: AppKit bridges: the `NSTextView` reader and the behind-window glass.

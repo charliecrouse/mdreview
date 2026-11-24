@@ -15,7 +15,7 @@ struct MarkdownBuilder {
     }
 
     let out = NSMutableAttributedString()
-    var headings: [Heading] = []
+    private(set) var headings: [Heading] = []
     let baseURL: URL?
     /// The parsed source, for telling fenced code from indented code.
     let lines: [String]

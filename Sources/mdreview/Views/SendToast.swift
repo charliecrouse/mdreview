@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The result of the last send (or save problem), floating over the reader until it fades.
 struct SendToast: View {
-    @Bindable var model: ReviewModel
+    let model: ReviewModel
 
     var body: some View {
         Group {

@@ -19,7 +19,7 @@ enum WaitCommand {
         guard FileManager.default.isReadableFile(atPath: file.path) else { fail("can't read \(path)") }
         let app = Bundle.main.bundleURL
         guard app.pathExtension == "app" else { fail("run the mdreview script inside mdreview.app") }
-        guard let store = ReviewModel.makeStore() else { fail("no Application Support folder to hand off through") }
+        guard let store = ReviewStore.forApp() else { fail("no Application Support folder to hand off through") }
         // A review sent while no command waited is handed over at once.
         if let review = store.takePending(for: file) {
             print(review, terminator: "")
