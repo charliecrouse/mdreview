@@ -19,10 +19,10 @@ extension ReviewStore {
         var date: Date
     }
 
-    /// Records that process `pid` waits for the review of `file`; returns the request's id.
-    public func request(_ file: URL, from pid: Int32 = getpid()) throws -> String {
+    /// Records that process `pid` waits for the review of `file` since `date`; returns the request's id.
+    public func request(_ file: URL, from pid: Int32 = getpid(), at date: Date = .now) throws -> String {
         let id = "\(pid)-\(UUID().uuidString)"
-        let request = Request(path: Self.key(for: file), pid: pid, date: Date())
+        let request = Request(path: Self.key(for: file), pid: pid, date: date)
         try FileManager.default.createDirectory(at: handoff, withIntermediateDirectories: true)
         try JSONEncoder().encode(request).write(to: handoff.appending(path: "\(id).request"), options: .atomic)
         return id

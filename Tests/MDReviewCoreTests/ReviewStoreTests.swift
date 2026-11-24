@@ -2,8 +2,8 @@ import Foundation
 import MDReviewCore
 import Testing
 
-/// A temporary folder holding `docs/plan.md`; the store goes in its `store/`.
-private func scratch() throws -> (root: URL, file: URL) {
+/// A fresh folder holding `docs/plan.md`. The caller removes `root`.
+func scratch() throws -> (root: URL, file: URL) {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
     let docs = root.appending(path: "docs", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: docs, withIntermediateDirectories: true)
@@ -12,163 +12,129 @@ private func scratch() throws -> (root: URL, file: URL) {
     return (root, file)
 }
 
-private let comments = [
-    ReviewComment(lines: 3...3, quote: "Ship it.", text: "When?", range: NSRange(location: 6, length: 8))
-]
+/// Overwrites the one comment record a store holds, the way a disk fault or a bad hand edit would.
+private func damageTheRecord(in root: URL) throws {
+    let records = root.appending(path: "store/Comments", directoryHint: .isDirectory)
+    let record = try #require(
+        try FileManager.default.contentsOfDirectory(at: records, includingPropertiesForKeys: nil).first)
+    try Data("{ not json".utf8).write(to: record)
+}
 
-@Test func storeRoundTripsCommentsAndWritesNothingBesideTheFile() throws {
+@Test func storeLoadsNoCommentsForAFileNeverSaved() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
     defer { try? FileManager.default.removeItem(at: root) }
 
-    #expect(try store.load(for: file).isEmpty)
-    try store.save(comments, for: file)
-    #expect(try store.load(for: file) == comments)
+    let loaded = try store.load(for: file)
 
-    let review = try store.saveReview("# Review", for: file)
-    #expect(review.path.hasPrefix(root.appending(path: "store").path))
-    #expect(review.lastPathComponent.hasPrefix("plan-") && review.lastPathComponent.hasSuffix(".review.md"))
-    #expect(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path) == ["plan.md"])
+    #expect(loaded.isEmpty)
+}
 
+@Test func storeLoadsTheCommentsSavedForAFile() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    try store.save([comment], for: file)
+
+    let loaded = try store.load(for: file)
+
+    #expect(loaded == [comment])
+}
+
+@Test func storeLoadsNoCommentsAfterSavingAnEmptyList() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    try store.save([.page(text: "When?")], for: file)
     try store.save([], for: file)
-    #expect(try store.load(for: file).isEmpty)
+
+    let loaded = try store.load(for: file)
+
+    #expect(loaded.isEmpty)
+}
+
+@Test func savingCommentsWritesNothingBesideTheFile() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    try store.save([.page(text: "When?")], for: file)
+
+    #expect(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "docs").path) == ["plan.md"])
 }
 
 @Test func storeFindsCommentsAfterTheFileMoves() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
     defer { try? FileManager.default.removeItem(at: root) }
-    try store.save(comments, for: file)
-
+    let comment = ReviewComment.page(text: "When?")
+    try store.save([comment], for: file)
     let moved = root.appending(path: "renamed.md")
     try FileManager.default.moveItem(at: file, to: moved)
-    #expect(try store.load(for: moved) == comments)
-    #expect(try store.load(for: moved) == comments)  // rekeyed, so the second load finds it by path
+
+    let loaded = try store.load(for: moved)
+
+    #expect(loaded == [comment])
 }
 
-@Test func storeKeepsAnUnreadableRecordAndStartsEmpty() throws {
+@Test func loadingADamagedRecordThrowsAndKeepsItsContents() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
     defer { try? FileManager.default.removeItem(at: root) }
-    try store.save(comments, for: file)
-    let records = root.appending(path: "store/Comments", directoryHint: .isDirectory)
-    let record = try #require(
-        try FileManager.default.contentsOfDirectory(at: records, includingPropertiesForKeys: nil).first)
-    try Data("{ not json".utf8).write(to: record)
+    try store.save([.page(text: "When?")], for: file)
+    try damageTheRecord(in: root)
 
     let error = try #require(throws: ReviewStore.UnreadableRecord.self) { try store.load(for: file) }
+
     let kept = try #require(error.preservedAt)
     #expect(try String(contentsOf: kept, encoding: .utf8) == "{ not json")
+}
 
-    #expect(try store.load(for: file).isEmpty)
-    try store.save(comments, for: file)
+@Test func loadingAfterADamagedRecordStartsEmpty() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    try store.save([.page(text: "When?")], for: file)
+    try damageTheRecord(in: root)
+    _ = try? store.load(for: file)
+
+    let loaded = try store.load(for: file)
+
+    #expect(loaded.isEmpty)
+}
+
+@Test func savingAfterADamagedRecordLeavesTheKeptCopyAlone() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    try store.save([.page(text: "When?")], for: file)
+    try damageTheRecord(in: root)
+    let error = try #require(throws: ReviewStore.UnreadableRecord.self) { try store.load(for: file) }
+    let kept = try #require(error.preservedAt)
+
+    try store.save([.page(text: "Again")], for: file)
+
     #expect(try String(contentsOf: kept, encoding: .utf8) == "{ not json")
 }
 
-@Test func handoffAnswersEachWaitingRequestForTheSentFileOnce() throws {
+@Test func savedReviewGoesInTheStoreNamedAfterTheFile() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
     defer { try? FileManager.default.removeItem(at: root) }
-    let other = root.appending(path: "other.md")
-    try "Other\n".write(to: other, atomically: true, encoding: .utf8)
 
-    let first = try store.request(file)
-    let second = try store.request(file)
-    let elsewhere = try store.request(other)
-    #expect(store.newestRequest()?.file.lastPathComponent == "other.md")
-    #expect(store.takeAnswer(for: first) == nil)
+    let review = try store.saveReview("# Review", for: file)
 
-    #expect(store.answer(.review("# Review"), for: file) == 2)
-    #expect(store.takeAnswer(for: first) == .review("# Review"))
-    #expect(store.takeAnswer(for: second) == .review("# Review"))
-    #expect(store.takeAnswer(for: first) == nil)
-    #expect(store.takeAnswer(for: elsewhere) == nil)
-    #expect(store.answer(.review("# Again"), for: file) == 0)
-
-    #expect(store.answer(.closed, for: other) == 1)
-    #expect(store.takeAnswer(for: elsewhere) == .closed)
-    #expect(store.newestRequest() == nil)
-    #expect(try FileManager.default.contentsOfDirectory(atPath: file.deletingLastPathComponent().path) == ["plan.md"])
+    #expect(review.deletingLastPathComponent().path.hasPrefix(root.appending(path: "store").path))
+    #expect(review.lastPathComponent.wholeMatch(of: /plan-[0-9a-f]+\.review\.md/) != nil)
 }
 
-@Test func handoffClosesRequestsForEveryOtherFile() throws {
-    let (root, file) = try scratch()
-    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
-    defer { try? FileManager.default.removeItem(at: root) }
-    let other = root.appending(path: "other.md")
-
-    let older = try store.request(other)
-    let kept = try store.request(file)
-    let cutoff = try #require(store.newestRequest())
-    #expect(cutoff.file.lastPathComponent == "plan.md")
-    let newer = try store.request(other)
-
-    #expect(store.closeRequests(except: file, madeBy: cutoff.date) == 1)
-    #expect(store.takeAnswer(for: older) == .closed)
-    #expect(store.takeAnswer(for: kept) == nil)
-    #expect(store.takeAnswer(for: newer) == nil)
-
-    #expect(store.closeRequests(except: nil, madeBy: .distantFuture) == 2)
-    #expect(store.takeAnswer(for: kept) == .closed)
-    #expect(store.takeAnswer(for: newer) == .closed)
-    #expect(store.newestRequest() == nil)
-}
-
-@Test func handoffDropsRequestsWhoseCommandExited() throws {
-    let (root, file) = try scratch()
-    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
-    defer { try? FileManager.default.removeItem(at: root) }
-    let gone = Int32.max
-    #expect(!ReviewStore.isRunning(gone))
-
-    let id = try store.request(file, from: gone)
-    #expect(store.newestRequest() == nil)
-    #expect(store.answer(.review("# Review"), for: file) == 0)
-    #expect(store.takeAnswer(for: id) == nil)
-    #expect(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "store/Handoff").path).isEmpty)
-}
-
-@Test func isWaitingOnlyForTheRequestedFileWhileItsCommandRuns() throws {
+@Test func savingAReviewWritesNothingBesideTheFile() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
     defer { try? FileManager.default.removeItem(at: root) }
 
-    #expect(!store.isWaiting(for: file))
-    _ = try store.request(file)
-    #expect(store.isWaiting(for: file))
-    #expect(!store.isWaiting(for: root.appending(path: "other.md")))
-    store.answer(.closed, for: file)
-    #expect(!store.isWaiting(for: file))
-}
+    _ = try store.saveReview("# Review", for: file)
 
-@Test func repliesRoundTripPerFileAndAreTakenOnce() throws {
-    let (root, file) = try scratch()
-    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
-    defer { try? FileManager.default.removeItem(at: root) }
-    let other = root.appending(path: "other.md")
-
-    try store.appendReply(file: file, id: "1a2b3c4d", text: "Renamed", resolve: true)
-    try store.appendReply(file: other, id: "ffffffff", text: "Elsewhere", resolve: false)
-    #expect(store.takeReplies(for: file) == [.init(id: "1a2b3c4d", text: "Renamed", resolve: true)])
-    #expect(store.takeReplies(for: file).isEmpty)
-    #expect(store.takeReplies(for: other).count == 1)
-    #expect(!FileManager.default.fileExists(atPath: root.appending(path: "store/Comments").path))
-}
-
-@Test func aReviewSentWithNoWaitingCommandIsQueuedForTheNextOne() throws {
-    let (root, file) = try scratch()
-    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
-    defer { try? FileManager.default.removeItem(at: root) }
-
-    #expect(store.takePending(for: file) == nil)
-    #expect(!store.deliver("# First", for: file))
-    #expect(!store.deliver("# Second", for: file))
-    #expect(store.takePending(for: file) == "# Second")
-    #expect(store.takePending(for: file) == nil)
-
-    #expect(!store.deliver("# Stale", for: file))
-    let id = try store.request(file)
-    #expect(store.deliver("# Live", for: file))
-    #expect(store.takeAnswer(for: id) == .review("# Live"))
-    #expect(store.takePending(for: file) == nil)
+    #expect(try FileManager.default.contentsOfDirectory(atPath: root.appending(path: "docs").path) == ["plan.md"])
 }
