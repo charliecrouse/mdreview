@@ -16,6 +16,8 @@ public struct ReviewStore: Sendable {
         var path: String
         /// Finds the file again after a rename or move, when its path no longer matches.
         var bookmark: Data?
+        /// Volume and file number of the file when saved; tells a moved file from a new one at its old path.
+        var fileID: String?
         var comments: [ReviewComment]
     }
 
@@ -41,7 +43,16 @@ public struct ReviewStore: Sendable {
         let url = recordURL(for: file)
         if FileManager.default.fileExists(atPath: url.path) {
             do {
-                return try JSONDecoder().decode(Record.self, from: Data(contentsOf: url)).comments
+                let record = try JSONDecoder().decode(Record.self, from: Data(contentsOf: url))
+                if let movedTo = Self.locationOfOriginal(of: record, replacedBy: file) {
+                    // The comments follow the file they were written on; a new file at this path starts empty.
+                    let target = recordURL(for: movedTo)
+                    if !FileManager.default.fileExists(atPath: target.path) {
+                        try? FileManager.default.moveItem(at: url, to: target)
+                    }
+                    return []
+                }
+                return record.comments
             } catch {
                 let aside = url.deletingPathExtension().appendingPathExtension(
                     "unreadable-\(Int(Date().timeIntervalSince1970)).json")
@@ -61,7 +72,9 @@ public struct ReviewStore: Sendable {
             if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
             return
         }
-        let record = Record(path: Self.key(for: file), bookmark: try? file.bookmarkData(), comments: comments)
+        let record = Record(
+            path: Self.key(for: file), bookmark: try? file.bookmarkData(), fileID: Self.fileID(of: file),
+            comments: comments)
         try FileManager.default.createDirectory(at: records, withIntermediateDirectories: true)
         try JSONEncoder().encode(record).write(to: url, options: .atomic)
     }
@@ -84,18 +97,43 @@ public struct ReviewStore: Sendable {
     // ponytail: linear scan of every record, only when the path has none; index bookmarks if it gets slow.
     private func recordFoundByBookmark(for file: URL) -> (URL, Record)? {
         let key = Self.key(for: file)
+        let id = Self.fileID(of: file)
         let urls = (try? FileManager.default.contentsOfDirectory(at: records, includingPropertiesForKeys: nil)) ?? []
         for url in urls where url.pathExtension == "json" {
             guard let data = try? Data(contentsOf: url),
                 let record = try? JSONDecoder().decode(Record.self, from: data),
-                let bookmark = record.bookmark
+                record.bookmark != nil || record.fileID != nil
             else { continue }
+            if let id, record.fileID == id { return (url, record) }
             var stale = false
-            let resolved = try? URL(
-                resolvingBookmarkData: bookmark, options: [.withoutUI, .withoutMounting], bookmarkDataIsStale: &stale)
+            let resolved = record.bookmark.flatMap {
+                try? URL(
+                    resolvingBookmarkData: $0, options: [.withoutUI, .withoutMounting], bookmarkDataIsStale: &stale)
+            }
             if let resolved, Self.key(for: resolved) == key { return (url, record) }
         }
         return nil
+    }
+
+    /// Where the record's original file lives now, when `file` is a different file at the record's path.
+    /// Nil when `file` is that original, or the original is gone (an editor's atomic save replaced it).
+    private static func locationOfOriginal(of record: Record, replacedBy file: URL) -> URL? {
+        guard let stored = record.fileID, let current = fileID(of: file), stored != current else { return nil }
+        let parts = stored.split(separator: ":").compactMap { Int64($0) }
+        guard parts.count == 3 else { return nil }
+        var fsid = fsid_t(val: (Int32(truncatingIfNeeded: parts[0]), Int32(truncatingIfNeeded: parts[1])))
+        var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+        let length = fsgetpath(&path, path.count, &fsid, UInt64(parts[2]))
+        guard length > 0 else { return nil }
+        return URL(
+            fileURLWithPath: FileManager.default.string(withFileSystemRepresentation: path, length: length - 1))
+    }
+
+    private static func fileID(of file: URL) -> String? {
+        var info = stat()
+        var volume = statfs()
+        guard stat(file.path, &info) == 0, statfs(file.path, &volume) == 0 else { return nil }
+        return "\(volume.f_fsid.val.0):\(volume.f_fsid.val.1):\(info.st_ino)"
     }
 
     /// Symlinks resolved too, because a resolved bookmark comes back as the real path.
