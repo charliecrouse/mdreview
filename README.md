@@ -151,10 +151,11 @@ Release tags are protected by the `release-tags` ruleset (`.github/rulesets/rele
   - `FileWatcher.swift`: watches the open file, including atomic saves, deletion and recreation.
   - `Views/`: the split view with a glass sidebar (outline and comments) and the comment inspector.
   - `Reader/`: AppKit bridges: the `NSTextView` reader and the behind-window glass.
-- `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewCommentTests.swift`, `ReviewExportTests.swift`, `ReviewStoreTests.swift`).
+- `Tests/MDReviewCoreTests/`: unit tests, one file per type under test (`MarkdownRendererTests.swift`, `ReviewCommentTests.swift`, `ReviewExportTests.swift`, `ReviewStoreTests.swift`), split by concern like the source (`ReviewStoreTests+Handoff.swift`).
 - `App/`: the app's asset catalog (icon) and `mdreview`, the command-line script the app bundles as a resource. `project.yml` builds the app from `Sources/mdreview` plus the `MDReviewCore` package product.
 - `UITests/`: the end-to-end UI test.
 - `docs/journeys.md`: the main user journeys as flows, each naming the UI test that covers it. `docs/images/` holds the screenshot.
+- `docs/testing.md`: how tests are written: behavior through the public API, Arrange/Act/Assert, and what goes in unit versus UI tests.
 - `skills/mdreview/SKILL.md`: the agent skill that teaches the review loop.
 - `.github/workflows/ci.yml`: the `check` job, which runs `make check` and `make app` on GitHub Actions.
 - `.github/workflows/release.yml`: runs release-please, then builds the app and attaches `mdreview.zip` and its checksum when a release PR is merged.

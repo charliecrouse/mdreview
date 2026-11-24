@@ -199,9 +199,11 @@ final class MDReviewUITests: XCTestCase {
         XCTAssertEqual(fields.firstMatch.value as? String, "Other note.")
     }
 
+    /// A fresh folder holding `fixture.md`, removed when the test ends.
     private func fixture() throws -> URL {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: dir) }
         let file = dir.appendingPathComponent("fixture.md")
         try "Ship the importer behind a feature flag.\n".write(to: file, atomically: true, encoding: .utf8)
         return file
@@ -229,14 +231,13 @@ final class MDReviewUITests: XCTestCase {
         let send = window.buttons["sendToAgent"]
         XCTAssertTrue(send.isEnabled)
         send.click()
-        let deadline = Date().addingTimeInterval(5)
-        var names: [String] = []
-        while names.isEmpty && Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-            names = (try? FileManager.default.contentsOfDirectory(atPath: reviews.path)) ?? []
+        let review = {
+            (try? FileManager.default.contentsOfDirectory(atPath: reviews.path))?.first { $0.hasSuffix(".review.md") }
         }
-        let name = try XCTUnwrap(names.first)
-        XCTAssertTrue(name.hasPrefix("fixture-") && name.hasSuffix(".review.md"), name)
+        let saved = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in review() != nil }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 5), .completed, "no review saved")
+        let name = try XCTUnwrap(review())
+        XCTAssertNotNil(name.wholeMatch(of: /fixture-[0-9a-f]+\.review\.md/), name)
         return try String(contentsOf: reviews.appendingPathComponent(name), encoding: .utf8)
     }
 
