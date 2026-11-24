@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/charliecrouse/mdreview/compare/v0.1.0...v0.1.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **MDReviewCore:** keep a moved file's comments off a new file at its old path ([#21](https://github.com/charliecrouse/mdreview/issues/21)) ([dc50b4d](https://github.com/charliecrouse/mdreview/commit/dc50b4d1ff3abbff4ce60cf06e37dc4c13a39e4b))
+
 ## 0.1.0 (2026-11-23)
 
 
