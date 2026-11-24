@@ -107,6 +107,22 @@ private func damageTheRecord(in root: URL) throws {
     #expect(loaded == [comment])
 }
 
+@Test func commentsStayAtTheOldPathWhenTheMovedFilesRecordSlotIsTaken() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    let other = ReviewComment.page(text: "Why?")
+    try store.save([comment], for: file)
+    let moved = root.appending(path: "renamed.md")
+    try FileManager.default.moveItem(at: file, to: moved)
+    try store.save([other], for: moved)
+    try "# New\n".write(to: file, atomically: true, encoding: .utf8)
+
+    #expect(try store.load(for: file) == [comment])
+    #expect(try store.load(for: moved) == [other])
+}
+
 @Test func storeKeepsCommentsWhenAnEditorReplacesTheFileAtTheSamePath() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
