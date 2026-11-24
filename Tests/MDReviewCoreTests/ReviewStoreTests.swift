@@ -78,6 +78,84 @@ private func damageTheRecord(in root: URL) throws {
     #expect(loaded == [comment])
 }
 
+@Test func aNewFileAtTheOldPathOfAMovedFileStartsWithNoComments() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    try store.save([.page(text: "When?")], for: file)
+    try FileManager.default.moveItem(at: file, to: root.appending(path: "renamed.md"))
+    try "# New\n".write(to: file, atomically: true, encoding: .utf8)
+
+    let loaded = try store.load(for: file)
+
+    #expect(loaded.isEmpty)
+}
+
+@Test func aMovedFileKeepsItsCommentsWhenANewFileTakesItsOldPath() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    try store.save([comment], for: file)
+    let moved = root.appending(path: "renamed.md")
+    try FileManager.default.moveItem(at: file, to: moved)
+    try "# New\n".write(to: file, atomically: true, encoding: .utf8)
+    _ = try store.load(for: file)
+
+    let loaded = try store.load(for: moved)
+
+    #expect(loaded == [comment])
+}
+
+@Test func commentsStayAtTheOldPathWhenTheMovedFilesRecordSlotIsTaken() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    let other = ReviewComment.page(text: "Why?")
+    try store.save([comment], for: file)
+    let moved = root.appending(path: "renamed.md")
+    try FileManager.default.moveItem(at: file, to: moved)
+    try store.save([other], for: moved)
+    try "# New\n".write(to: file, atomically: true, encoding: .utf8)
+
+    #expect(try store.load(for: file) == [comment])
+    #expect(try store.load(for: moved) == [other])
+}
+
+@Test func storeKeepsCommentsWhenAnEditorReplacesTheFileAtTheSamePath() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    try store.save([comment], for: file)
+    let draft = file.deletingLastPathComponent().appending(path: "plan.md.tmp")
+    try "# Plan v2\n".write(to: draft, atomically: false, encoding: .utf8)
+    _ = try FileManager.default.replaceItemAt(file, withItemAt: draft)
+
+    let loaded = try store.load(for: file)
+
+    #expect(loaded == [comment])
+}
+
+@Test func aNewFileAtTheOldPathStartsEmptyAfterAnEditorReplacedTheFileAndItLaterMoved() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    try store.save([comment], for: file)
+    let draft = file.deletingLastPathComponent().appending(path: "plan.md.tmp")
+    try "# Plan v2\n".write(to: draft, atomically: false, encoding: .utf8)
+    _ = try FileManager.default.replaceItemAt(file, withItemAt: draft)
+    #expect(try store.load(for: file) == [comment])
+    let moved = root.appending(path: "renamed.md")
+    try FileManager.default.moveItem(at: file, to: moved)
+    try "# New\n".write(to: file, atomically: true, encoding: .utf8)
+
+    #expect(try store.load(for: file).isEmpty)
+    #expect(try store.load(for: moved) == [comment])
+}
+
 @Test func loadingADamagedRecordThrowsAndKeepsItsContents() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
