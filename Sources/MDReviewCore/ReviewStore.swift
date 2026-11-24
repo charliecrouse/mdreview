@@ -47,10 +47,11 @@ public struct ReviewStore: Sendable {
                 if let movedTo = Self.locationOfOriginal(of: record, replacedBy: file) {
                     // The comments follow the file they were written on; a new file at this path starts empty.
                     let target = recordURL(for: movedTo)
-                    if !FileManager.default.fileExists(atPath: target.path) {
-                        try? FileManager.default.moveItem(at: url, to: target)
+                    if !FileManager.default.fileExists(atPath: target.path),
+                        (try? FileManager.default.moveItem(at: url, to: target)) != nil
+                    {
+                        return []
                     }
-                    return []
                 }
                 return record.comments
             } catch {
