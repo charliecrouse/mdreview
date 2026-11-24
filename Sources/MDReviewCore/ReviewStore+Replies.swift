@@ -4,9 +4,9 @@ import Foundation
 /// so the app stays the only writer of a comment record.
 extension ReviewStore {
     public struct Reply: Codable, Equatable, Sendable {
-        public var id: String
-        public var text: String
-        public var resolve: Bool
+        public let id: String
+        public let text: String
+        public let resolve: Bool
 
         public init(id: String, text: String, resolve: Bool) {
             (self.id, self.text, self.resolve) = (id, text, resolve)
@@ -21,14 +21,12 @@ extension ReviewStore {
     /// Posted after a reply is written, so a running app shows it.
     public static let replyNotification = Notification.Name("com.charliecrouse.mdreview.reply")
 
-    private var handoffFolder: URL { directory.appending(path: "Handoff", directoryHint: .isDirectory) }
-
     /// Leaves a reply to comment `id` (a prefix of its full id) on `file` for the app to merge.
     public func appendReply(file: URL, id: String, text: String, resolve: Bool) throws {
-        try FileManager.default.createDirectory(at: handoffFolder, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: handoff, withIntermediateDirectories: true)
         let body = ReplyFile(path: Self.key(for: file), reply: Reply(id: id, text: text, resolve: resolve))
         try JSONEncoder().encode(body).write(
-            to: handoffFolder.appending(
+            to: handoff.appending(
                 path: "\(Self.hash(for: file))-\(Self.replyStamp())-\(UUID().uuidString).reply"),
             options: .atomic)
     }
@@ -41,7 +39,7 @@ extension ReviewStore {
     public func takeReplies(for file: URL) -> [Reply] {
         let key = Self.key(for: file)
         let urls =
-            (try? FileManager.default.contentsOfDirectory(at: handoffFolder, includingPropertiesForKeys: nil)) ?? []
+            (try? FileManager.default.contentsOfDirectory(at: handoff, includingPropertiesForKeys: nil)) ?? []
         return urls.filter { $0.pathExtension == "reply" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
             .compactMap { url -> Reply? in
                 guard let data = try? Data(contentsOf: url),
@@ -54,7 +52,7 @@ extension ReviewStore {
     }
 
     private func pendingURL(for file: URL) -> URL {
-        handoffFolder.appending(path: "\(Self.hash(for: file)).pending")
+        handoff.appending(path: "\(Self.hash(for: file)).pending")
     }
 
     /// Hands `review` to every command waiting for `file`; with none waiting it is kept for the next one.
@@ -65,7 +63,7 @@ extension ReviewStore {
             try? FileManager.default.removeItem(at: pendingURL(for: file))
             return true
         }
-        try? FileManager.default.createDirectory(at: handoffFolder, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: handoff, withIntermediateDirectories: true)
         try? Data(review.utf8).write(to: pendingURL(for: file), options: .atomic)
         return false
     }

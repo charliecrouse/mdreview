@@ -2,7 +2,7 @@ import MDReviewCore
 import SwiftUI
 
 struct ContentView: View {
-    @Bindable var model: ReviewModel
+    let model: ReviewModel
     @State private var showInspector = true
     @State private var selectionRect: CGRect?
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency

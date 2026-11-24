@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A glass button floating by the selected text, so commenting doesn't need the inspector.
 struct CommentPill: View {
-    @Bindable var model: ReviewModel
+    let model: ReviewModel
     let selection: CGRect
 
     var body: some View {

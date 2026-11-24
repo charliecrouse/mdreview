@@ -2,7 +2,7 @@ import MDReviewCore
 import SwiftUI
 
 struct CommentsInspector: View {
-    @Bindable var model: ReviewModel
+    let model: ReviewModel
     @FocusState private var focusedField: ReviewComment.ID?
 
     var body: some View {
@@ -47,7 +47,7 @@ struct CommentsInspector: View {
     /// file, reads and writes nothing instead of indexing past the end of the list.
     private func text(of id: ReviewComment.ID) -> Binding<String> {
         Binding(
-            get: { model.comments.first { $0.id == id }?.text ?? "" },
+            get: { model.text(of: id) },
             set: { model.setText($0, for: id) })
     }
 }

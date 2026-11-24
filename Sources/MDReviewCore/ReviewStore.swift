@@ -19,8 +19,10 @@ public struct ReviewStore: Sendable {
         var comments: [ReviewComment]
     }
 
-    let directory: URL
+    private let directory: URL
     private var records: URL { directory.appending(path: "Comments", directoryHint: .isDirectory) }
+    /// Where the app and the command line meet: requests, answers, replies and the queued review.
+    var handoff: URL { directory.appending(path: "Handoff", directoryHint: .isDirectory) }
 
     public init(directory: URL) {
         self.directory = directory

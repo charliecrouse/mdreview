@@ -6,11 +6,11 @@ import UniformTypeIdentifiers
 
 @MainActor @Observable
 final class ReviewModel {
-    var fileURL: URL?
-    var rendered = RenderedMarkdown()
-    var comments: [ReviewComment] = [] { didSet { saveComments() } }
+    private(set) var fileURL: URL?
+    private(set) var rendered = RenderedMarkdown()
+    private(set) var comments: [ReviewComment] = [] { didSet { saveComments() } }
     var selection = NSRange(location: 0, length: 0)
-    var focusedComment: ReviewComment.ID?
+    private(set) var focusedComment: ReviewComment.ID?
     var scrollTarget: NSRange?
     var status: String?
     var filter = CommentFilter.all
@@ -18,19 +18,16 @@ final class ReviewModel {
     private(set) var agentWaiting = false
     var error: String?
     /// The open file was deleted or moved away; the last version stays on screen until it comes back.
-    var isMissing = false
+    private(set) var isMissing = false
     @ObservationIgnored private var source = ""
     @ObservationIgnored private var watcher: FileWatcher?
 
-    @ObservationIgnored private let store = ReviewModel.makeStore()
+    @ObservationIgnored private let store = ReviewStore.forApp()
     /// Off while the open file's saved record couldn't be read or moved aside, so saving can't overwrite it.
     @ObservationIgnored private var savesComments = false
-    private nonisolated static let log = Logger(subsystem: "com.charliecrouse.mdreview", category: "store")
+    private static let log = Logger(subsystem: "com.charliecrouse.mdreview", category: "store")
 
-    var canComment: Bool {
-        MarkdownRenderer.lineRange(of: selection, in: rendered.text) != nil
-            && MarkdownRenderer.quote(of: selection, in: rendered.text) != nil
-    }
+    var canComment: Bool { ReviewComment(selection: selection, in: rendered.text) != nil }
 
     /// The comments the inspector lists, in document order.
     var visibleComments: [ReviewComment] { comments.filter(filter.includes) }
@@ -104,14 +101,14 @@ final class ReviewModel {
 
     func addComment() {
         guard let comment = ReviewComment(selection: selection, in: rendered.text) else { return }
-        comments.append(comment)
-        sortComments()
-        if !filter.includes(comment) { filter = .all }
-        focusedComment = comment.id
+        insert(comment)
     }
 
     func addPageComment() {
-        let comment = ReviewComment.page()
+        insert(.page())
+    }
+
+    private func insert(_ comment: ReviewComment) {
         comments.append(comment)
         sortComments()
         if !filter.includes(comment) { filter = .all }
@@ -125,24 +122,33 @@ final class ReviewModel {
     /// Merges replies the `mdreview reply` command left for the open file into their comments.
     func applyReplies() {
         guard let url = fileURL, let replies = store?.takeReplies(for: url), !replies.isEmpty else { return }
-        comments.apply(replies)
+        edit { $0.apply(replies) }
     }
 
     /// The reviewer's call on whether the comment is handled; an agent's reply alone never closes it.
     func setResolved(_ resolved: Bool, for id: ReviewComment.ID) {
-        guard let index = comments.firstIndex(where: { $0.id == id }) else { return }
-        comments[index].isResolved = resolved
-        if !resolved { comments[index].agentSaysDone = false }
+        edit { $0.setResolved(resolved, for: id) }
+    }
+
+    /// Empty once the comment is gone, so a field still editing a deleted comment shows nothing.
+    func text(of id: ReviewComment.ID) -> String {
+        comments.first { $0.id == id }?.text ?? ""
     }
 
     func setText(_ text: String, for id: ReviewComment.ID) {
-        guard let index = comments.firstIndex(where: { $0.id == id }), comments[index].text != text else { return }
-        comments[index].text = text
+        edit { $0.setText(text, for: id) }
     }
 
     func delete(_ id: ReviewComment.ID) {
-        comments.removeAll { $0.id == id }
+        edit { $0.delete(id) }
         if focusedComment == id { focusedComment = nil }
+    }
+
+    /// Assigns only a real change, so a field echoing back the text it already shows doesn't rewrite the record.
+    private func edit(_ change: (inout [ReviewComment]) -> Void) {
+        var edited = comments
+        change(&edited)
+        if edited != comments { comments = edited }
     }
 
     func reveal(_ comment: ReviewComment) {
@@ -220,19 +226,6 @@ final class ReviewModel {
         } catch {
             Self.log.error("Couldn't save comments for \(url.path, privacy: .public): \(error)")
             status = "Couldn't save comments: \(error.localizedDescription)"
-        }
-    }
-
-    nonisolated static func makeStore() -> ReviewStore? {
-        // The UI test passes `-StoreDirectory <dir>` so it stays out of the user's Application Support.
-        if let dir = UserDefaults.standard.string(forKey: "StoreDirectory") {
-            return ReviewStore(directory: URL(fileURLWithPath: dir, isDirectory: true))
-        }
-        do {
-            return try ReviewStore.standard()
-        } catch {
-            log.error("No Application Support folder; comments won't be saved: \(error)")
-            return nil
         }
     }
 }

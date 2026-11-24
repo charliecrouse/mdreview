@@ -3,26 +3,26 @@ import Foundation
 public struct ReviewComment: Identifiable, Hashable, Codable, Sendable {
     public let id: UUID
     /// Inclusive 1-based source lines the comment is anchored to.
-    public var lines: ClosedRange<Int>
+    public internal(set) var lines: ClosedRange<Int>
     /// The rendered text the reviewer selected.
-    public var quote: String
-    public var text: String
+    public internal(set) var quote: String
+    public internal(set) var text: String
     /// Rendered character range, used to highlight the anchor while the file is open.
-    public var range: NSRange
+    public internal(set) var range: NSRange
     /// The quoted text was rewritten, removed or can't be told apart from another copy,
     /// so `lines` and `range` point at an earlier version.
-    public var isOutdated = false
+    public internal(set) var isOutdated = false
     /// Rendered text just before and after the quote, which tells one copy of a repeated quote from another.
-    public var prefix = ""
-    public var suffix = ""
+    public internal(set) var prefix = ""
+    public internal(set) var suffix = ""
     /// What the agent answered with `mdreview reply`.
-    public var agentReply: String?
+    public internal(set) var agentReply: String?
     /// The agent proposes the comment is handled; it stays open until the reviewer confirms.
-    public var agentSaysDone = false
+    public internal(set) var agentSaysDone = false
     /// The reviewer confirmed the comment is handled.
-    public var isResolved = false
+    public internal(set) var isResolved = false
     /// About the whole file, not a selection: no quote, lines or range, and never outdated.
-    public var isPage = false
+    public internal(set) var isPage = false
 
     private enum CodingKeys: String, CodingKey {
         case id, lines, quote, text, range, isOutdated, prefix, suffix, agentReply, agentSaysDone, isResolved, isPage

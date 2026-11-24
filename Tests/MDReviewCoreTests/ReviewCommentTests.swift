@@ -1,6 +1,7 @@
 import Foundation
-import MDReviewCore
 import Testing
+
+@testable import MDReviewCore
 
 /// A comment on `quote`, made the way the app makes one: from a selection in the rendered `source`.
 private func comment(on quote: String, in source: String, occurrence: Int = 0) throws -> ReviewComment {
@@ -221,4 +222,23 @@ func commentWithImpossibleBoundsFailsToDecode(bounds: String) {
         #"{"id":"178F91EC-977E-4D33-90FC-F3D9DA236313","quote":"Ship","text":"","isOutdated":true,"#
         + bounds + "}"
     #expect(throws: DecodingError.self) { try JSONDecoder().decode(ReviewComment.self, from: Data(saved.utf8)) }
+}
+
+/// A card's field keeps the comment's id while it edits, and may still write after its comment is deleted.
+@Test(arguments: ["", "Half-typed"])
+func deletingACommentWhileItIsEditedLeavesTheOthersIntact(typed: String) throws {
+    let source = "Ship it.\n\nHold it.\n"
+    let others = [try comment(on: "Ship", in: source), try comment(on: "Hold", in: source)]
+    var editing = ReviewComment.page()
+    editing.text = typed
+    var list = [editing] + others
+
+    list.delete(editing.id)
+    list.setText(typed + " more", for: editing.id)
+    list.setResolved(true, for: editing.id)
+    #expect(list == others)
+
+    list.setText("Kept", for: others[1].id)
+    list.setResolved(true, for: others[0].id)
+    #expect(list.map(\.text) == ["Note", "Kept"] && list.map(\.isResolved) == [true, false])
 }
