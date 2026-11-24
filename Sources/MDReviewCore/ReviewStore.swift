@@ -44,14 +44,20 @@ public struct ReviewStore: Sendable {
         if FileManager.default.fileExists(atPath: url.path) {
             do {
                 let record = try JSONDecoder().decode(Record.self, from: Data(contentsOf: url))
-                if let movedTo = Self.locationOfOriginal(of: record, replacedBy: file) {
-                    // The comments follow the file they were written on; a new file at this path starts empty.
-                    let target = recordURL(for: movedTo)
-                    if !FileManager.default.fileExists(atPath: target.path),
-                        (try? FileManager.default.moveItem(at: url, to: target)) != nil
-                    {
-                        return []
+                guard let movedTo = Self.locationOfOriginal(of: record, replacedBy: file) else {
+                    if let current = Self.fileID(of: file), record.fileID != current {
+                        var refreshed = record
+                        refreshed.fileID = current
+                        try? JSONEncoder().encode(refreshed).write(to: url, options: .atomic)
                     }
+                    return record.comments
+                }
+                // The comments follow the file they were written on; a new file at this path starts empty.
+                let target = recordURL(for: movedTo)
+                if !FileManager.default.fileExists(atPath: target.path),
+                    (try? FileManager.default.moveItem(at: url, to: target)) != nil
+                {
+                    return []
                 }
                 return record.comments
             } catch {

@@ -138,6 +138,24 @@ private func damageTheRecord(in root: URL) throws {
     #expect(loaded == [comment])
 }
 
+@Test func aNewFileAtTheOldPathStartsEmptyAfterAnEditorReplacedTheFileAndItLaterMoved() throws {
+    let (root, file) = try scratch()
+    let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
+    defer { try? FileManager.default.removeItem(at: root) }
+    let comment = ReviewComment.page(text: "When?")
+    try store.save([comment], for: file)
+    let draft = file.deletingLastPathComponent().appending(path: "plan.md.tmp")
+    try "# Plan v2\n".write(to: draft, atomically: false, encoding: .utf8)
+    _ = try FileManager.default.replaceItemAt(file, withItemAt: draft)
+    #expect(try store.load(for: file) == [comment])
+    let moved = root.appending(path: "renamed.md")
+    try FileManager.default.moveItem(at: file, to: moved)
+    try "# New\n".write(to: file, atomically: true, encoding: .utf8)
+
+    #expect(try store.load(for: file).isEmpty)
+    #expect(try store.load(for: moved) == [comment])
+}
+
 @Test func loadingADamagedRecordThrowsAndKeepsItsContents() throws {
     let (root, file) = try scratch()
     let store = ReviewStore(directory: root.appending(path: "store", directoryHint: .isDirectory))
